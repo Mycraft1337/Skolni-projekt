@@ -1,0 +1,15 @@
+{
+  "id": "./",
+  "name": "MindTrack — digitální pohoda",
+  "short_name": "MindTrack",
+  "description": "Osobní přehled sociálních sítí, spánku a nálady.",
+  "lang": "cs-CZ",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#101827",
+  "icons": [
+    {"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101827">
+  <meta name="description" content="MindTrack — osobní přehled sociálních sítí, spánku a nálady.">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+  <title>MindTrack — digitální pohoda</title>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#" aria-label="MindTrack domů">
+        <span class="brand-mark">M</span><span>MindTrack</span>
+      </a>
+      <p class="side-label">TVŮJ PŘEHLED</p>
+      <button class="nav-item active" data-view="dashboard"><span>◫</span> Přehled</button>
+      <button class="nav-item" data-view="entry"><span>＋</span> Denní záznam</button>
+      <button class="nav-item" data-view="history"><span>☷</span> Historie</button>
+      <div class="sidebar-bottom">
+        <div class="privacy-note"><span class="privacy-dot"></span><div><strong>Tvoje data zůstávají u tebe</strong><small>Ukládají se v tomto prohlížeči.</small></div></div>
+        <p class="side-foot">MindTrack · školní prototyp</p>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="mobile-brand"><span class="brand-mark">M</span><strong>MindTrack</strong></div>
+        <div class="topbar-spacer"></div>
+        <span class="today-label" id="todayLabel"></span>
+        <button class="button button-primary top-add" id="topAdd">＋ Přidat záznam</button>
+      </header>
+
+      <section class="view active" id="dashboardView">
+        <div class="page-heading">
+          <div><p class="eyebrow">OSOBNÍ DASHBOARD</p><h1>Jak se ti daří?</h1><p class="muted">Sleduj souvislosti mezi digitálními návyky, spánkem a náladou.</p></div>
+          <div class="date-chip" id="rangeLabel">Posledních 7 dní</div>
+        </div>
+
+        <div class="stat-grid">
+          <article class="stat-card"><div class="stat-top"><span class="stat-label">Čas na sítích</span><span class="stat-icon purple">◷</span></div><div class="stat-value" id="avgSocial">—</div><div class="stat-caption">průměr za den</div></article>
+          <article class="stat-card"><div class="stat-top"><span class="stat-label">Délka spánku</span><span class="stat-icon blue">☾</span></div><div class="stat-value" id="avgSleep">—</div><div class="stat-caption">průměr za noc</div></article>
+          <article class="stat-card"><div class="stat-top"><span class="stat-label">Nálada</span><span class="stat-icon orange">☺</span></div><div class="stat-value" id="avgMood">—</div><div class="stat-caption">z 5 bodů</div></article>
+          <article class="stat-card"><div class="stat-top"><span class="stat-label">Záznamy</span><span class="stat-icon green">✓</span></div><div class="stat-value" id="entryCount">0</div><div class="stat-caption">za posledních 7 dní</div></article>
+        </div>
+
+        <div class="content-grid">
+          <article class="panel chart-panel">
+            <div class="panel-heading"><div><h2>Tvoje poslední dny</h2><p class="muted">Čas na sítích a délka spánku</p></div><span class="legend"><i class="legend-dot purple-dot"></i>Sítě <i class="legend-dot blue-dot"></i>Spánek</span></div>
+            <div id="trendChart" class="chart-area"><div class="empty-state">Zatím tu nejsou data. Přidej svůj první denní záznam.</div></div>
+            <div class="chart-axis-note"><span>Hodnoty jsou založené na tvých vlastních záznamech.</span></div>
+          </article>
+          <article class="panel insight-panel">
+            <div class="panel-heading"><div><h2>Malé postřehy</h2><p class="muted">Co ukazují tvoje záznamy</p></div><span class="sparkle">✳</span></div>
+            <div id="insights"><div class="insight-card"><span class="insight-symbol">✦</span><div><strong>Začni pozorováním</strong><p>Přidej několik denních záznamů. Postupně se tu objeví souhrny tvých návyků.</p></div></div></div>
+            <p class="disclaimer">Jde o orientační popis záznamů, ne o diagnózu ani důkaz příčiny a následku.</p>
+          </article>
+        </div>
+
+        <article class="panel recent-panel">
+          <div class="panel-heading"><div><h2>Poslední záznamy</h2><p class="muted">Tvoje nedávné denní check-iny</p></div><button class="text-button" id="viewHistory">Zobrazit historii →</button></div>
+          <div id="recentEntries" class="recent-list"><div class="empty-state">Zatím nemáš žádné záznamy.</div></div>
+        </article>
+      </section>
+
+      <section class="view" id="entryView">
+        <div class="page-heading"><div><p class="eyebrow">DENNÍ CHECK-IN</p><h1>Jaký byl dnešek?</h1><p class="muted">Vyplnění zabere přibližně minutu. Odhady jsou v pořádku.</p></div></div>
+        <form id="entryForm" class="entry-layout">
+          <div class="form-main">
+            <article class="panel form-panel">
+              <div class="section-title"><span class="step-number">1</span><div><h2>Digitální návyky</h2><p class="muted">Kolik času jsi dnes strávil/a na sociálních sítích?</p></div></div>
+              <label class="field-label" for="date">Datum</label><input id="date" name="date" type="date" required>
+              <div class="field-grid">
+                <div><label class="field-label" for="socialMinutes">Celkový čas na sítích (minuty)</label><input id="socialMinutes" name="socialMinutes" type="number" min="0" max="1440" step="5" placeholder="např. 120" required><small class="field-help">Instagram, TikTok, Snapchat apod.</small></div>
+                <div><label class="field-label" for="bedMinutes">Sítě před spaním (minuty)</label><input id="bedMinutes" name="bedMinutes" type="number" min="0" max="600" step="5" placeholder="např. 25" required><small class="field-help">Přibližně poslední hodina před usnutím.</small></div>
+              </div>
+            </article>
+            <article class="panel form-panel">
+              <div class="section-title"><span class="step-number">2</span><div><h2>Spánek</h2><p class="muted">Jaká byla tvoje poslední noc?</p></div></div>
+              <div class="field-grid">
+                <div><label class="field-label" for="sleepHours">Délka spánku (hodiny)</label><input id="sleepHours" name="sleepHours" type="number" min="0" max="24" step="0.25" placeholder="např. 8" required></div>
+                <div><label class="field-label" for="sleepQuality">Kvalita spánku</label><select id="sleepQuality" name="sleepQuality" required><option value="">Vyber hodnocení</option><option value="1">1 — velmi špatná</option><option value="2">2 — spíše špatná</option><option value="3">3 — průměrná</option><option value="4">4 — dobrá</option><option value="5">5 — velmi dobrá</option></select></div>
+              </div>
+            </article>
+            <article class="panel form-panel">
+              <div class="section-title"><span class="step-number">3</span><div><h2>Jak ses cítil/a?</h2><p class="muted">Vyber hodnoty, které nejlépe vystihují dnešek.</p></div></div>
+              <label class="field-label" for="mood">Nálada</label>
+              <div class="rating-row" id="moodRating">
+                <label class="rating-option"><input type="radio" name="mood" value="1" required><span>😞</span><small>1</small></label>
+                <label class="rating-option"><input type="radio" name="mood" value="2"><span>🙁</span><small>2</small></label>
+                <label class="rating-option"><input type="radio" name="mood" value="3"><span>😐</span><small>3</small></label>
+                <label class="rating-option"><input type="radio" name="mood" value="4"><span>🙂</span><small>4</small></label>
+                <label class="rating-option"><input type="radio" name="mood" value="5"><span>😄</span><small>5</small></label>
+              </div>
+              <div class="field-grid">
+                <div><label class="field-label" for="stress">Stres</label><select id="stress" name="stress" required><option value="">Vyber hodnocení</option><option value="1">1 — velmi nízký</option><option value="2">2 — nízký</option><option value="3">3 — střední</option><option value="4">4 — vysoký</option><option value="5">5 — velmi vysoký</option></select></div>
+                <div><label class="field-label" for="focus">Soustředění</label><select id="focus" name="focus" required><option value="">Vyber hodnocení</option><option value="1">1 — velmi špatné</option><option value="2">2 — spíše špatné</option><option value="3">3 — průměrné</option><option value="4">4 — dobré</option><option value="5">5 — velmi dobré</option></select></div>
+              </div>
+              <label class="field-label" for="notes">Poznámka <span class="optional">(nepovinné)</span></label><textarea id="notes" name="notes" rows="3" maxlength="500" placeholder="Např. náročný školní den, trénink, setkání s kamarády…"></textarea>
+            </article>
+            <div class="form-actions"><button type="button" class="button button-secondary" id="cancelEntry">Zrušit</button><button type="submit" class="button button-primary">Uložit záznam <span>→</span></button></div>
+            <p id="formMessage" class="form-message" role="status"></p>
+          </div>
+          <aside class="form-aside"><div class="aside-card"><span class="aside-icon">🔒</span><h3>Soukromí na prvním místě</h3><p>V tomto prototypu se údaje ukládají do místního úložiště prohlížeče. Neodesílají se na server.</p><p><strong>Pozor:</strong> při smazání dat prohlížeče se mohou záznamy ztratit. Používej export zálohy.</p></div><div class="aside-card soft"><span class="aside-icon">💡</span><h3>Bez hodnocení</h3><p>Nejde o to mít „dokonalé“ hodnoty. Cílem je všimnout si vlastních návyků bez obviňování sebe sama.</p></div></aside>
+        </form>
+      </section>
+
+      <section class="view" id="historyView">
+        <div class="page-heading"><div><p class="eyebrow">TVÉ ZÁZNAMY</p><h1>Historie</h1><p class="muted">Prohlížej, exportuj nebo smaž uložené záznamy.</p></div><button class="button button-primary" id="historyAdd">＋ Nový záznam</button></div>
+        <article class="panel history-panel"><div class="history-toolbar"><div><h2>Všechny dny</h2><p class="muted" id="historyCount">0 záznamů</p></div><div class="toolbar-actions"><button class="button button-secondary" id="exportCsv">↓ Export CSV</button><label class="button button-secondary import-label">↑ Import JSON<input type="file" id="importJson" accept=".json,application/json" hidden></label></div></div><div id="historyEntries" class="history-list"><div class="empty-state">Zatím nemáš žádné záznamy.</div></div><div class="danger-zone"><div><strong>Správa dat</strong><p class="muted">Tato akce smaže všechny záznamy z tohoto prohlížeče.</p></div><button class="button button-danger" id="clearAll">Smazat vše</button></div></article>
+      </section>
+
+      <footer class="app-footer"><span>MindTrack</span><span>Vlastní školní prototyp · tvoje data, tvůj přehled</span></footer>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="./app.js"></script>
+</body>
+</html>
