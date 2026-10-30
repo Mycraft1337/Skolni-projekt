@@ -60,6 +60,68 @@ function showView(name) {
   if(name==="history") renderHistory();
   window.scrollTo({top:0,behavior:"smooth"});
 }
+
+function initMinutePickers() {
+  document.querySelectorAll(".minute-picker").forEach(picker => {
+    const wheel = picker.querySelector(".minute-wheel");
+    const input = $(picker.dataset.input);
+    const max = Number(picker.dataset.max);
+    const step = Number(picker.dataset.step);
+    const precision = (String(step).split(".")[1] || "").length;
+    const values = Array.from(
+      {length: Math.floor(max / step) + 1},
+      (_, index) => Number((index * step).toFixed(precision))
+    );
+
+    wheel.innerHTML = values.map(value => {
+      const label = picker.dataset.unit === "hours" ? hoursLabel(value) : `${value} min`;
+      return `<div class="minute-option" role="option" data-value="${value}">${label}</div>`;
+    }).join("");
+
+    const updateSelection = index => {
+      const safeIndex = Math.max(0, Math.min(values.length - 1, index));
+      const options = wheel.querySelectorAll(".minute-option");
+      options.forEach((option, optionIndex) => {
+        const selected = optionIndex === safeIndex;
+        option.classList.toggle("selected", selected);
+        option.setAttribute("aria-selected", String(selected));
+      });
+      input.value = values[safeIndex];
+      return safeIndex;
+    };
+
+    const selectIndex = (index, smooth=false) => {
+      const safeIndex = updateSelection(index);
+      wheel.scrollTo({top: safeIndex * 40, behavior: smooth ? "smooth" : "auto"});
+    };
+
+    picker.setValue = value => selectIndex(Math.round(Number(value || 0) / step));
+    wheel.addEventListener("scroll", () => updateSelection(Math.round(wheel.scrollTop / 40)));
+    wheel.addEventListener("click", event => {
+      const option = event.target.closest(".minute-option");
+      if(option) selectIndex(values.indexOf(Number(option.dataset.value)), true);
+    });
+    wheel.addEventListener("keydown", event => {
+      const keys = {ArrowUp:-1, ArrowDown:1, PageUp:-6, PageDown:6};
+      if(!(event.key in keys) && event.key !== "Home" && event.key !== "End") return;
+      event.preventDefault();
+      const current = values.indexOf(Number(input.value));
+      selectIndex(event.key === "Home" ? 0 : event.key === "End" ? values.length - 1 : current + keys[event.key], true);
+    });
+    picker.querySelectorAll(".minute-step").forEach(button => button.addEventListener("click", () => {
+      const current = values.indexOf(Number(input.value));
+      selectIndex(current + Number(button.dataset.direction), true);
+    }));
+
+    picker.setValue(input.value);
+  });
+}
+
+function setMinutePicker(inputId, value) {
+  document.querySelector(`.minute-picker[data-input="${inputId}"]`).setValue(value);
+}
+
+initMinutePickers();
 document.querySelectorAll(".nav-item").forEach(b=>b.addEventListener("click",()=>showView(b.dataset.view)));
 $("todayLabel").textContent = new Date().toLocaleDateString("cs-CZ",{weekday:"short",day:"numeric",month:"short"});
 $("topAdd").addEventListener("click",()=>openForm());
@@ -71,12 +133,10 @@ function openForm(entry=null) {
   editingId = entry?.id || null;
   $("entryForm").reset();
   $("date").value = entry?.date || todayISO();
-  $("socialMinutes").value = entry?.socialMinutes ?? "";
-  $("bedMinutes").value = entry?.bedMinutes ?? "";
-  $("sleepHours").value = entry?.sleepHours ?? "";
+  setMinutePicker("socialMinutes", entry?.socialMinutes ?? 0);
+  setMinutePicker("bedMinutes", entry?.bedMinutes ?? 0);
+  setMinutePicker("sleepHours", entry?.sleepHours ?? 8);
   $("sleepQuality").value = entry?.sleepQuality ?? "";
-  $("stress").value = entry?.stress ?? "";
-  $("focus").value = entry?.focus ?? "";
   $("notes").value = entry?.notes ?? "";
   if(entry) {
     const radio = document.querySelector(`input[name="mood"][value="${entry.mood}"]`);
@@ -97,8 +157,6 @@ $("entryForm").addEventListener("submit",e=>{
     sleepHours: Number(f.get("sleepHours")),
     sleepQuality: Number(f.get("sleepQuality")),
     mood: Number(f.get("mood")),
-    stress: Number(f.get("stress")),
-    focus: Number(f.get("focus")),
     notes: String(f.get("notes")||"").trim(),
     updatedAt: new Date().toISOString()
   };
@@ -177,9 +235,9 @@ function renderHistory() {
 }
 $("exportCsv").addEventListener("click",()=>{
   if(!entries.length){showToast("Nejdřív vytvoř alespoň jeden záznam.");return;}
-  const headers=["datum","cas_na_sitich_min","siti_pred_spanim_min","spanek_hodiny","kvalita_spanku_1_5","nalada_1_5","stres_1_5","soustredeni_1_5","poznamka"];
+  const headers=["datum","cas_na_sitich_min","siti_pred_spanim_min","spanek_hodiny","kvalita_spanku_1_5","nalada_1_5","poznamka"];
   const quote=v=>`"${String(v??"").replace(/"/g,'""')}"`;
-  const rows=entries.map(e=>[e.date,e.socialMinutes,e.bedMinutes,e.sleepHours,e.sleepQuality,e.mood,e.stress,e.focus,e.notes].map(quote).join(";"));
+  const rows=entries.map(e=>[e.date,e.socialMinutes,e.bedMinutes,e.sleepHours,e.sleepQuality,e.mood,e.notes].map(quote).join(";"));
   downloadBlob("\uFEFF"+[headers.join(";"),...rows].join("\r\n"),"mindtrack-data.csv","text/csv;charset=utf-8");
   showToast("CSV export byl připraven.");
 });

@@ -74,14 +74,41 @@
               <div class="section-title"><span class="step-number">1</span><div><h2>Digitální návyky</h2><p class="muted">Kolik času jsi dnes strávil/a na sociálních sítích?</p></div></div>
               <label class="field-label" for="date">Datum</label><input id="date" name="date" type="date" required>
               <div class="field-grid">
-                <div><label class="field-label" for="socialMinutes">Celkový čas na sítích (minuty)</label><input id="socialMinutes" name="socialMinutes" type="number" min="0" max="1440" step="5" placeholder="např. 120" required><small class="field-help">Instagram, TikTok, Snapchat apod.</small></div>
-                <div><label class="field-label" for="bedMinutes">Sítě před spaním (minuty)</label><input id="bedMinutes" name="bedMinutes" type="number" min="0" max="600" step="5" placeholder="např. 25" required><small class="field-help">Přibližně poslední hodina před usnutím.</small></div>
+                <div>
+                  <label class="field-label" for="socialMinutesWheel">Celkový čas na sítích (minuty)</label>
+                  <div class="minute-picker" data-input="socialMinutes" data-max="1440" data-step="5" data-unit="minutes">
+                    <button class="minute-step" type="button" data-direction="-1" aria-label="O pět minut méně">▲</button>
+                    <div class="minute-wheel" id="socialMinutesWheel" tabindex="0" role="listbox" aria-label="Celkový čas na sociálních sítích"></div>
+                    <button class="minute-step" type="button" data-direction="1" aria-label="O pět minut více">▼</button>
+                  </div>
+                  <input id="socialMinutes" name="socialMinutes" type="hidden" value="0">
+                  <small class="field-help">Posouvej kolečkem nebo šipkami po 5 minutách.</small>
+                </div>
+                <div>
+                  <label class="field-label" for="bedMinutesWheel">Sítě před spaním (minuty)</label>
+                  <div class="minute-picker" data-input="bedMinutes" data-max="600" data-step="5" data-unit="minutes">
+                    <button class="minute-step" type="button" data-direction="-1" aria-label="O pět minut méně">▲</button>
+                    <div class="minute-wheel" id="bedMinutesWheel" tabindex="0" role="listbox" aria-label="Čas na sociálních sítích před spaním"></div>
+                    <button class="minute-step" type="button" data-direction="1" aria-label="O pět minut více">▼</button>
+                  </div>
+                  <input id="bedMinutes" name="bedMinutes" type="hidden" value="0">
+                  <small class="field-help">Přibližně poslední hodina před usnutím.</small>
+                </div>
               </div>
             </article>
             <article class="panel form-panel">
               <div class="section-title"><span class="step-number">2</span><div><h2>Spánek</h2><p class="muted">Jaká byla tvoje poslední noc?</p></div></div>
               <div class="field-grid">
-                <div><label class="field-label" for="sleepHours">Délka spánku (hodiny)</label><input id="sleepHours" name="sleepHours" type="number" min="0" max="24" step="0.25" placeholder="např. 8" required></div>
+                <div>
+                  <label class="field-label" for="sleepHoursWheel">Délka spánku</label>
+                  <div class="minute-picker" data-input="sleepHours" data-max="24" data-step="0.25" data-unit="hours">
+                    <button class="minute-step" type="button" data-direction="-1" aria-label="O patnáct minut méně">▲</button>
+                    <div class="minute-wheel" id="sleepHoursWheel" tabindex="0" role="listbox" aria-label="Délka spánku"></div>
+                    <button class="minute-step" type="button" data-direction="1" aria-label="O patnáct minut více">▼</button>
+                  </div>
+                  <input id="sleepHours" name="sleepHours" type="hidden" value="8">
+                  <small class="field-help">Posouvej po 15 minutách.</small>
+                </div>
                 <div><label class="field-label" for="sleepQuality">Kvalita spánku</label><select id="sleepQuality" name="sleepQuality" required><option value="">Vyber hodnocení</option><option value="1">1 — velmi špatná</option><option value="2">2 — spíše špatná</option><option value="3">3 — průměrná</option><option value="4">4 — dobrá</option><option value="5">5 — velmi dobrá</option></select></div>
               </div>
             </article>
@@ -94,10 +121,6 @@
                 <label class="rating-option"><input type="radio" name="mood" value="3"><span>😐</span><small>3</small></label>
                 <label class="rating-option"><input type="radio" name="mood" value="4"><span>🙂</span><small>4</small></label>
                 <label class="rating-option"><input type="radio" name="mood" value="5"><span>😄</span><small>5</small></label>
-              </div>
-              <div class="field-grid">
-                <div><label class="field-label" for="stress">Stres</label><select id="stress" name="stress" required><option value="">Vyber hodnocení</option><option value="1">1 — velmi nízký</option><option value="2">2 — nízký</option><option value="3">3 — střední</option><option value="4">4 — vysoký</option><option value="5">5 — velmi vysoký</option></select></div>
-                <div><label class="field-label" for="focus">Soustředění</label><select id="focus" name="focus" required><option value="">Vyber hodnocení</option><option value="1">1 — velmi špatné</option><option value="2">2 — spíše špatné</option><option value="3">3 — průměrné</option><option value="4">4 — dobré</option><option value="5">5 — velmi dobré</option></select></div>
               </div>
               <label class="field-label" for="notes">Poznámka <span class="optional">(nepovinné)</span></label><textarea id="notes" name="notes" rows="3" maxlength="500" placeholder="Např. náročný školní den, trénink, setkání s kamarády…"></textarea>
             </article>
