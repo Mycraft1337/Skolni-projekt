@@ -21,7 +21,7 @@
       <button class="nav-item" data-view="entry"><span>＋</span> Denní záznam</button>
       <button class="nav-item" data-view="history"><span>☷</span> Historie</button>
       <div class="sidebar-bottom">
-        <div class="privacy-note"><span class="privacy-dot"></span><div><strong>Tvoje data zůstávají u tebe</strong><small>Ukládají se v tomto prohlížeči.</small></div></div>
+        <div class="privacy-note"><span class="privacy-dot"></span><div><strong>Soukromí na prvním místě</strong><small>Celé záznamy zůstávají v tomto prohlížeči.</small></div></div>
         <p class="side-foot">MindTrack · školní prototyp</p>
       </div>
     </aside>
@@ -127,7 +127,7 @@
             <div class="form-actions"><button type="button" class="button button-secondary" id="cancelEntry">Zrušit</button><button type="submit" class="button button-primary">Uložit záznam <span>→</span></button></div>
             <p id="formMessage" class="form-message" role="status"></p>
           </div>
-          <aside class="form-aside"><div class="aside-card"><span class="aside-icon">🔒</span><h3>Soukromí na prvním místě</h3><p>V tomto prototypu se údaje ukládají do místního úložiště prohlížeče. Neodesílají se na server.</p><p><strong>Pozor:</strong> při smazání dat prohlížeče se mohou záznamy ztratit. Používej export zálohy.</p></div><div class="aside-card soft"><span class="aside-icon">💡</span><h3>Bez hodnocení</h3><p>Nejde o to mít „dokonalé“ hodnoty. Cílem je všimnout si vlastních návyků bez obviňování sebe sama.</p></div></aside>
+          <aside class="form-aside"><div class="aside-card"><span class="aside-icon">🔒</span><h3>Soukromí na prvním místě</h3><p>Celé záznamy se ukládají pouze do tohoto prohlížeče. Pokud udělíš souhlas, odešle se anonymně jen pět číselných hodnot.</p><p>Datum ani volná poznámka se nikdy neodesílají.</p></div><div class="aside-card soft"><span class="aside-icon">💡</span><h3>Bez hodnocení</h3><p>Nejde o to mít „dokonalé“ hodnoty. Cílem je všimnout si vlastních návyků bez obviňování sebe sama.</p></div></aside>
         </form>
       </section>
 
@@ -136,10 +136,25 @@
         <article class="panel history-panel"><div class="history-toolbar"><div><h2>Všechny dny</h2><p class="muted" id="historyCount">0 záznamů</p></div><div class="toolbar-actions"><button class="button button-secondary" id="exportCsv">↓ Export CSV</button><label class="button button-secondary import-label">↑ Import JSON<input type="file" id="importJson" accept=".json,application/json" hidden></label></div></div><div id="historyEntries" class="history-list"><div class="empty-state">Zatím nemáš žádné záznamy.</div></div><div class="danger-zone"><div><strong>Správa dat</strong><p class="muted">Tato akce smaže všechny záznamy z tohoto prohlížeče.</p></div><button class="button button-danger" id="clearAll">Smazat vše</button></div></article>
       </section>
 
-      <footer class="app-footer"><span>MindTrack</span><span>Vlastní školní prototyp · tvoje data, tvůj přehled</span></footer>
+      <footer class="app-footer"><span>MindTrack</span><button class="privacy-settings" id="privacySettings" type="button">Soukromí a sdílení</button><span>Vlastní školní prototyp · tvoje data, tvůj přehled</span></footer>
     </main>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <dialog class="consent-dialog" id="consentDialog" aria-labelledby="consentTitle">
+    <div class="consent-icon" aria-hidden="true">♡</div>
+    <h2 id="consentTitle">Pomůžeš anonymnímu výzkumu?</h2>
+    <p>MindTrack může odeslat anonymní číselné hodnoty ze tvých nových záznamů pro účely školního projektu.</p>
+    <ul>
+      <li>Odesílá se čas na sítích, čas před spaním, délka a kvalita spánku a nálada.</li>
+      <li>Neodesílá se datum, poznámka ani žádný identifikátor uživatele.</li>
+      <li>Supabase může při přenosu technicky zpracovat IP adresu, ale MindTrack ji neukládá do tabulky.</li>
+    </ul>
+    <p class="consent-note">Volba je dobrovolná. Aplikace funguje i bez sdílení a rozhodnutí lze později změnit.</p>
+    <div class="consent-actions">
+      <button class="button button-secondary" id="declineSharing" type="button">Ne, jen lokálně</button>
+      <button class="button button-primary" id="acceptSharing" type="button">Ano, anonymně sdílet</button>
+    </div>
+  </dialog>
   <script src="./app.js"></script>
 </body>
 </html>

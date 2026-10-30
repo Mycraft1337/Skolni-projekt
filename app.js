@@ -1,4 +1,7 @@
 const STORAGE_KEY = "mindtrack.entries.v1";
+const CONSENT_KEY = "mindtrack.anonymous-sharing.v1";
+const SUPABASE_URL = "https://rukeziypxobbwzrjnlqj.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_ZyPRQFMwUXGSedp_2vhoVg_2jsckHhD";
 const $ = (id) => document.getElementById(id);
 let entries = loadEntries();
 let editingId = null;
@@ -52,6 +55,50 @@ function showToast(message) {
   const el=$("toast"); el.textContent=message; el.classList.add("show");
   clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove("show"),2600);
 }
+
+function getSharingConsent() {
+  try { return localStorage.getItem(CONSENT_KEY); }
+  catch { return null; }
+}
+
+function setSharingConsent(value) {
+  localStorage.setItem(CONSENT_KEY, value);
+  $("consentDialog").close();
+  showToast(value === "accepted" ? "Anonymní sdílení je zapnuté." : "Záznamy zůstávají pouze v tomto prohlížeči.");
+}
+
+function openConsentDialog() {
+  const dialog = $("consentDialog");
+  if(!dialog.open) dialog.showModal();
+}
+
+async function submitAnonymousRecord(record) {
+  const controller = new AbortController();
+  const timeout = setTimeout(()=>controller.abort(), 8000);
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/anonymous_entries`, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "apikey": SUPABASE_PUBLISHABLE_KEY,
+        "Authorization": `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify({
+        social_minutes: record.socialMinutes,
+        bed_minutes: record.bedMinutes,
+        sleep_hours: record.sleepHours,
+        sleep_quality: record.sleepQuality,
+        mood: record.mood
+      })
+    });
+    if(!response.ok) throw new Error(`Supabase request failed: ${response.status}`);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function showView(name) {
   document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
   $(name+"View").classList.add("active");
@@ -122,6 +169,13 @@ function setMinutePicker(inputId, value) {
 }
 
 initMinutePickers();
+$("acceptSharing").addEventListener("click",()=>setSharingConsent("accepted"));
+$("declineSharing").addEventListener("click",()=>setSharingConsent("declined"));
+$("privacySettings").addEventListener("click",openConsentDialog);
+$("consentDialog").addEventListener("cancel",event=>{
+  if(getSharingConsent()===null) event.preventDefault();
+});
+if(getSharingConsent()===null) setTimeout(openConsentDialog, 0);
 document.querySelectorAll(".nav-item").forEach(b=>b.addEventListener("click",()=>showView(b.dataset.view)));
 $("todayLabel").textContent = new Date().toLocaleDateString("cs-CZ",{weekday:"short",day:"numeric",month:"short"});
 $("topAdd").addEventListener("click",()=>openForm());
@@ -146,7 +200,7 @@ function openForm(entry=null) {
   document.querySelector("#entryView h1").textContent = entry ? "Upravit záznam" : "Jaký byl dnešek?";
   showView("entry");
 }
-$("entryForm").addEventListener("submit",e=>{
+$("entryForm").addEventListener("submit",async e=>{
   e.preventDefault();
   const f = new FormData(e.currentTarget);
   const record = {
@@ -166,10 +220,23 @@ $("entryForm").addEventListener("submit",e=>{
   }
   const duplicate = entries.find(x=>x.date===record.date && x.id!==record.id);
   if(duplicate && !confirm("Pro toto datum už záznam existuje. Chceš ho nahradit?")) return;
+  const shouldShare = !editingId && !duplicate && getSharingConsent()==="accepted";
   entries = entries.filter(x=>x.id!==record.id && x.date!==record.date);
   entries.push(record); saveEntries();
-  showToast(editingId ? "Záznam byl upraven." : "Záznam byl uložen.");
-  editingId=null; showView("dashboard");
+  const wasEditing = Boolean(editingId);
+  editingId=null;
+  showView("dashboard");
+
+  if(shouldShare) {
+    try {
+      await submitAnonymousRecord(record);
+      showToast("Záznam byl uložen a anonymně sdílen.");
+    } catch {
+      showToast("Záznam je uložen lokálně, ale anonymní sdílení se nepodařilo.");
+    }
+  } else {
+    showToast(wasEditing ? "Záznam byl upraven." : "Záznam byl uložen.");
+  }
 });
 
 function renderDashboard() {
