@@ -1,5 +1,5 @@
-const CACHE = "mindtrack-pwa-v3";
-const ASSETS = ["./","./index.html","./styles.css","./app.js","./manifest.json","./icon.svg"];
+const CACHE = "mindtrack-pwa-v4";
+const ASSETS = ["./","./index.html","./styles.css?v=1.3.1","./app.js?v=1.3.1","./manifest.json","./icon.svg"];
 
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));

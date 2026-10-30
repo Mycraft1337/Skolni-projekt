@@ -1,6 +1,6 @@
 const STORAGE_KEY = "mindtrack.entries.v1";
 const CONSENT_KEY = "mindtrack.anonymous-sharing.v1";
-const APP_VERSION = "v1.3";
+const APP_VERSION = "v1.3.1";
 const SUPABASE_URL = "https://rukeziypxobbwzrjnlqj.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_ZyPRQFMwUXGSedp_2vhoVg_2jsckHhD";
 const $ = (id) => document.getElementById(id);
