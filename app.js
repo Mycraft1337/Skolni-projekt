@@ -1,5 +1,6 @@
 const STORAGE_KEY = "mindtrack.entries.v1";
 const CONSENT_KEY = "mindtrack.anonymous-sharing.v1";
+const APP_VERSION = "v1.3";
 const SUPABASE_URL = "https://rukeziypxobbwzrjnlqj.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_ZyPRQFMwUXGSedp_2vhoVg_2jsckHhD";
 const $ = (id) => document.getElementById(id);
@@ -172,6 +173,7 @@ function setMinutePicker(inputId, value) {
 }
 
 initMinutePickers();
+$("appVersion").textContent = APP_VERSION;
 $("acceptSharing").addEventListener("click",()=>setSharingConsent("accepted"));
 $("declineSharing").addEventListener("click",()=>setSharingConsent("declined"));
 $("privacySettings").addEventListener("click",openConsentDialog);
@@ -235,7 +237,8 @@ $("entryForm").addEventListener("submit",async e=>{
       await submitAnonymousRecord(record);
       showToast("Záznam byl uložen a anonymně sdílen.");
     } catch(error) {
-      const status = error.status ? ` (chyba ${error.status})` : "";
+      console.error("Anonymní sdílení selhalo:", error);
+      const status = error.status ? ` (chyba ${error.status})` : " (chyba sítě nebo CORS)";
       showToast(`Záznam je uložen lokálně, ale anonymní sdílení se nepodařilo${status}.`);
     }
   } else {
@@ -345,5 +348,16 @@ backupButton.addEventListener("click",()=>{
 $("exportCsv").parentElement.appendChild(backupButton);
 renderDashboard();
 if("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+  let refreshing=false;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{
+    if(refreshing) return;
+    refreshing=true;
+    location.reload();
+  });
+  window.addEventListener("load",async()=>{
+    try {
+      const registration=await navigator.serviceWorker.register("./sw.js",{updateViaCache:"none"});
+      await registration.update();
+    } catch {}
+  });
 }

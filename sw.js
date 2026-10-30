@@ -1,4 +1,4 @@
-const CACHE = "mindtrack-pwa-v2";
+const CACHE = "mindtrack-pwa-v3";
 const ASSETS = ["./","./index.html","./styles.css","./app.js","./manifest.json","./icon.svg"];
 
 self.addEventListener("install", event => {
