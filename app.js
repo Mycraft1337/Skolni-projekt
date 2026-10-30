@@ -81,7 +81,6 @@ async function submitAnonymousRecord(record) {
       signal: controller.signal,
       headers: {
         "apikey": SUPABASE_PUBLISHABLE_KEY,
-        "Authorization": `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
         "Content-Type": "application/json",
         "Prefer": "return=minimal"
       },
@@ -93,7 +92,11 @@ async function submitAnonymousRecord(record) {
         mood: record.mood
       })
     });
-    if(!response.ok) throw new Error(`Supabase request failed: ${response.status}`);
+    if(!response.ok) {
+      const error = new Error(`Supabase request failed: ${response.status}`);
+      error.status = response.status;
+      throw error;
+    }
   } finally {
     clearTimeout(timeout);
   }
@@ -231,8 +234,9 @@ $("entryForm").addEventListener("submit",async e=>{
     try {
       await submitAnonymousRecord(record);
       showToast("Záznam byl uložen a anonymně sdílen.");
-    } catch {
-      showToast("Záznam je uložen lokálně, ale anonymní sdílení se nepodařilo.");
+    } catch(error) {
+      const status = error.status ? ` (chyba ${error.status})` : "";
+      showToast(`Záznam je uložen lokálně, ale anonymní sdílení se nepodařilo${status}.`);
     }
   } else {
     showToast(wasEditing ? "Záznam byl upraven." : "Záznam byl uložen.");
