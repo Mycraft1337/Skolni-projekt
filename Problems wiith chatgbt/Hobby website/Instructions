@@ -1,0 +1,62 @@
+1. Goal: Someone visiting the page should understand your hobby and why you like it.
+
+Requirements:
+
+* One main heading with the hobby's name.
+* A short introduction.
+* Two sections, each with its own heading: "Why I enjoy it" and "How to get started."
+* A list of three things a beginner needs.
+* One relevant image with alternative text describing it.
+* A link to a useful website about the hobby, with descriptive clickable text.
+
+Skills you'll practice: Choosing HTML elements, organizing headings, and adding images, lists, and links. Include the basic HTML document structure if you know it.
+
+Optional bonus: Make the link open in a new tab.
+You're finished when: The page opens in your browser, the image appears, and the link works.
+2.
+* Give the main heading a colour of your choice.
+* Give the page a background colour using the body selector.
+* Bonus: Make the image smaller using the CSS width property. Try a value in pixels, such as 300px.
+3.
+Requirements: Add these properties to your existing body rule:
+
+* font-family: try Arial, sans-serif.
+* line-height: try 1.6 to increase the space between lines.
+* padding: try 20px to add space between the content and the page edges.
+
+Concepts: Typography and padding—space inside an element, between its edge and its content.
+
+Bonus: Try a lighter background colour and compare readability.
+4.
+Your next challenge: make your two sections look like cards.
+
+* Give both <section> elements the same class, named card.
+* Write one CSS rule that gives those cards a white background and 20px of padding.
+* Add margin-bottom: 16px; to separate the cards.
+
+New concept: Padding adds space inside an element; margin 
+Bonus: Try border-radius: 12px; for rounded corners.
+5.
+Next challenge: Your cards can stretch too wide on a large screen. Make both cards:
+
+* No wider than 600 pixels.
+* Centred horizontally.
+* Able to shrink on narrower screens.
+6.
+Next challenge: turn your tennis page into a finished beginner’s guide.
+
+Keep your current content and cards, then:
+
+* Centre the main heading, introduction, image, and final link so they line up with the cards.
+* Choose a colour scheme with readable text and a background you like.
+* Add a third card titled “My favourite tennis shot,” with a short explanation.
+* Give all section headings a consistent style using one CSS rule.
+* Make the image fit on narrow screens without stretching or losing its proportions.
+* Add a footer with a short “Made by…” credit.
+* Make the link visibly change when a pointer hovers over it.
+
+Skills: Selectors, shared styles, spacing, page alignment, responsive images, and hover states.
+
+Optional bonus: Make the image’s corners rounded and give the cards a subtle shadow.
+
+Finished means: All three cards match, the page looks organised, and nothing causes horizontal scrolling in a narrow preview.

@@ -1,0 +1,28 @@
+Project 2: A café menu
+
+Goal: Create a menu for an imaginary café. Choose its name, colours, and food yourself.
+
+Requirements:
+
+* A header with the café’s name and a short slogan.
+* Three menu categories, with at least two items in each.
+* Each item has a name, short description, and price.
+* On each item, the name sits on the left and the price on the right, with the description underneath.
+* A consistent design using shared CSS classes.
+* A footer with opening hours and a fictional address.
+* A layout that fits both narrow and wide screens without horizontal scrolling.
+
+New skill: Use Flexbox to arrange the item names and prices beside each other. You can investigate it or ask me for an explanation when you reach that step.
+
+Optional bonus: Highlight one item as the “Chef’s choice.”
+
+Finished means: The menu is readable, prices line up consistently, and long item names don’t overlap their prices.
+
+To finish the project:
+
+* Give descriptions a shared style and add breathing room between menu items.
+* Limit the menu’s width and centre it so prices aren’t pushed to the screen’s far edge.
+* Add page padding, a font, and your chosen colours.
+* Test a long item name in a narrow preview for overlap or horizontal scrolling.
+
+Optional cleanup: remove the empty .headers rule. Fix John’s, Espresso, Desserts, and beans in the text.

@@ -1,0 +1,46 @@
+body 
+	{
+    	background-color:lightblue;
+    	font-family: Arial, sans-serif;
+    	line-height: 1.6;
+    	padding: 20px;
+    	margin-left: auto;
+		margin-right: auto;
+		text-align: center;
+    }
+.headings
+	{
+		color: navy;
+		
+	}
+.court_width 
+	{
+		width: 300px;
+		max-width: 100%;
+		height: auto;
+	}
+.card
+	{
+		 background-color:white;
+		 padding:20px;
+		 margin-bottom:16px;
+		 border-radius: 12px;
+		 max-width: 600px;
+		 margin-left: auto;
+		 margin-right: auto;
+	} 
+#introduction
+{
+    max-width: 600px;
+	margin-left: auto;
+	margin-right: auto; 
+}
+
+#wiki_link
+{
+    text-decoration: none;
+}
+#wiki_link:hover
+{
+    text-decoration: underline;
+}
