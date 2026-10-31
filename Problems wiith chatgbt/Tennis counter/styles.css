@@ -1,4 +1,8 @@
-.names_scores
+.center_text
+{
+	text-align: center;
+}
+.table
 {
 	display:flex;
 	justify-content: space-between;
@@ -7,3 +11,14 @@
 	margin-left:auto;
 	
 }
+.player
+{
+	display: flex;
+	flex-direction: column;
+}
+.center
+{
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+}	

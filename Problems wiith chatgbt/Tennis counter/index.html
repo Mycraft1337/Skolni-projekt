@@ -3,21 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="styles.css"
+    <link rel="stylesheet" href="styles.css">
     <title>Tennis Counter</title>
+    <script src="app.js" defer></script>
 </head>
 <body>
-    <div class="names_scores">
-        <span>Player 1</span>
-        <span>Player 2</span>
+    <h1 class="center_text">Tennis Counter</h1>    
+    <div class="table">
+        <div class="player">
+            <span>Player1</span>
+            <span id="score_1">0</span>
+            <button id="add_button_1">Add point</button>
+            <button id="subtract_button_1">Subtract point</button>
+        </div>
+        <div class="player">
+            <span>Player2</span>
+            <span id="score_2">0</span>
+            <button id="add_button_2">Add point</button>
+            <button id="subtract_button_2">Subtract point</button>
+        </div>
     </div>
-    <div class="names_scores">
-        <span>Number1</span>
-        <span>Number2</span>
-    </div>
-    <div class="names_scores">
-        <button>Add point</button>
-        <button>Add point</button>
-    </div>
+    <button class="center" id="button_reset">Reset</button>
 </body>
 </html>
