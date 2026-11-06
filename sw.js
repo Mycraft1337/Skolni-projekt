@@ -1,5 +1,5 @@
-const CACHE='mindtrack-v3-'+self.registration.scope;
-const ASSETS=['./','./index.html','./styles.css?v=3.0.0','./app.js?v=3.0.0','./core.js?v=3.0.0','./cloud.js?v=3.0.0','./config.js?v=3.0.0','./icon.svg','./manifest.json'];
+const CACHE='mindtrack-v3.1-'+self.registration.scope;
+const ASSETS=['./','./index.html','./styles.css?v=3.1.0','./app.js?v=3.1.0','./core.js?v=3.1.0','./cloud.js?v=3.1.0','./config.js?v=3.1.0','./icon.svg','./manifest.json'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)));self.skipWaiting();});
 self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET'||new URL(e.request.url).origin!==self.location.origin)return;e.respondWith(fetch(e.request).catch(()=>caches.open(CACHE).then(c=>c.match(e.request)).then(r=>r||Response.error())));});
