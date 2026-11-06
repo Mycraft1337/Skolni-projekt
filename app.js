@@ -14,7 +14,8 @@ async function sync(){
 }
 function available(){if(busy){showToast('Počkej na dokončení odesílání.');return false;}return true;}
 function showView(name){document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===name+'View'));document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view===name));if(name==='dashboard')renderDashboard();if(name==='history')renderHistory();window.scrollTo(0,0);}
-function openForm(entry=null){if(!available())return;editingId=entry?.date||null;$('entryForm').reset();$('date').max=C.yesterday();$('date').value=entry?.date||C.yesterday();setMinutePicker('socialMinutes',entry?.socialMinutes||0);setMinutePicker('bedMinutes',entry?.bedMinutes||0);setMinutePicker('sleepHours',entry?.sleepHours??8);$('sleepQuality').value=entry?.sleepQuality||'';if(entry)document.querySelector(`input[name="mood"][value="${entry.mood}"]`).checked=true;showView('entry');}
+function openForm(entry=null){if(!available())return;editingId=entry?.date||null;$('entryDone').hidden=true;$('entryForm').hidden=false;$('entryForm').reset();$('formMessage').textContent='';$('date').max=C.yesterday();$('date').value=entry?.date||C.yesterday();$('entryDateLabel').textContent=formatDate($('date').value);for(const [prefix,total] of [['social',entry?.socialMinutes],['sleep',entry?Math.round(entry.sleepHours*60):undefined]]){ $(prefix+'H').value=total===undefined?'':Math.floor(total/60);$(prefix+'M').value=total===undefined?'':total%60;}for(const key of ['sleepQuality','mood']){if(entry)document.querySelector(`input[name="${key}"][value="${entry[key]}"]`).checked=true;}if(entry?.schemaVersion===3)document.querySelector(`input[name="beforeBed"][value="${entry.beforeBed?'yes':'no'}"]`).checked=true;$('oldEvening').hidden=entry?.schemaVersion!==2;showView('entry');}
+function home(){const entry=entries.find(e=>e.date===C.yesterday());if(!entry){openForm();return;}showView('entry');$('entryForm').hidden=true;$('entryDone').hidden=false;$('doneDate').textContent='Uložený den: '+formatDate(entry.date);$('editToday').onclick=()=>openForm(entry);}
 function renderDashboard(){const list=recentDays();for(const [id,key,formatter] of [['avgSocial','socialMinutes',minutesLabel],['avgSleep','sleepHours',hoursLabel],['avgMood','mood',v=>v.toFixed(1)+' / 5']]){const v=average(list,key);$(id).textContent=v===null?'—':formatter(v);}$('entryCount').textContent=list.length;$('trendChart').innerHTML=makeChart(list);renderInsights(list);$('recentEntries').innerHTML=entries.slice(0,4).map(entryRow).join('')||'Zatím nejsou záznamy.';wireRows();}
 function entryRow(e){return `<div class="entry-row"><div>${esc(formatDate(e.date))}<small class="entry-sub">Den a následující noc</small></div><div>${minutesLabel(e.socialMinutes)}<small> na sítích</small></div><div>${hoursLabel(e.sleepHours)}<small> spánek (${e.sleepQuality}/5)</small></div><div>Nálada ${e.mood}/5</div><div class="row-actions"><button class="icon-button" data-edit="${esc(e.date)}" aria-label="Upravit">✎</button><button class="icon-button" data-delete="${esc(e.date)}" aria-label="Smazat">×</button></div></div>`;}
 function renderHistory(){$('historyCount').textContent=entries.length+' záznamů';$('historyEntries').innerHTML=entries.map(entryRow).join('')||'Zatím nejsou záznamy.';wireRows();}
@@ -51,67 +52,6 @@ function showToast(message) {
 }
 
 
-function initMinutePickers() {
-  document.querySelectorAll(".minute-picker").forEach(picker => {
-    const wheel = picker.querySelector(".minute-wheel");
-    const input = $(picker.dataset.input);
-    const max = Number(picker.dataset.max);
-    const step = Number(picker.dataset.step);
-    const precision = (String(step).split(".")[1] || "").length;
-    const values = Array.from(
-      {length: Math.floor(max / step) + 1},
-      (_, index) => Number((index * step).toFixed(precision))
-    );
-
-    wheel.innerHTML = values.map(value => {
-      const label = picker.dataset.unit === "hours" ? hoursLabel(value) : `${value} min`;
-      return `<div class="minute-option" role="option" data-value="${value}">${label}</div>`;
-    }).join("");
-
-    const updateSelection = index => {
-      const safeIndex = Math.max(0, Math.min(values.length - 1, index));
-      const options = wheel.querySelectorAll(".minute-option");
-      options.forEach((option, optionIndex) => {
-        const selected = optionIndex === safeIndex;
-        option.classList.toggle("selected", selected);
-        option.setAttribute("aria-selected", String(selected));
-      });
-      input.value = values[safeIndex];
-      return safeIndex;
-    };
-
-    const selectIndex = (index, smooth=false) => {
-      const safeIndex = updateSelection(index);
-      wheel.scrollTo({top: safeIndex * 40, behavior: smooth ? "smooth" : "auto"});
-    };
-
-    picker.setValue = value => selectIndex(Math.round(Number(value || 0) / step));
-    wheel.addEventListener("scroll", () => updateSelection(Math.round(wheel.scrollTop / 40)));
-    wheel.addEventListener("click", event => {
-      const option = event.target.closest(".minute-option");
-      if(option) selectIndex(values.indexOf(Number(option.dataset.value)), true);
-    });
-    wheel.addEventListener("keydown", event => {
-      const keys = {ArrowUp:-1, ArrowDown:1, PageUp:-6, PageDown:6};
-      if(!(event.key in keys) && event.key !== "Home" && event.key !== "End") return;
-      event.preventDefault();
-      const current = values.indexOf(Number(input.value));
-      selectIndex(event.key === "Home" ? 0 : event.key === "End" ? values.length - 1 : current + keys[event.key], true);
-    });
-    picker.querySelectorAll(".minute-step").forEach(button => button.addEventListener("click", () => {
-      const current = values.indexOf(Number(input.value));
-      selectIndex(current + Number(button.dataset.direction), true);
-    }));
-
-    picker.setValue(input.value);
-  });
-}
-
-function setMinutePicker(inputId, value) {
-  document.querySelector(`.minute-picker[data-input="${inputId}"]`).setValue(value);
-}
-
-
 function makeChart(list) {
   if(!list.length) return '<div class="empty-state">Zatím tu nejsou data. Přidej svůj první denní záznam.</div>';
   const days=[];
@@ -138,19 +78,19 @@ function renderInsights(list) {
     insights.push(["☾","Spánek",`Průměrná délka spánku v záznamech je ${hoursLabel(sl)}. Kvalita spánku se může lišit den ode dne.`]);
     insights.push(["☺","Nálada",`Průměrné hodnocení nálady je ${m.toFixed(1).replace(".",",")} z 5. Jednotlivé hodnocení je subjektivní a běžně kolísá.`]);
     if(list.length>=5) {
-      const evening=average(list,"bedMinutes");
-      insights.push(["⌁","Večerní používání",`Před spaním zaznamenáváš průměrně ${minutesLabel(evening)} na sítích. Zkus si všimnout, jak se to pojí s délkou a kvalitou následujícího spánku.`]);
+      const answers=list.filter(e=>e.schemaVersion===3), yes=answers.filter(e=>e.beforeBed).length;
+      insights.push(["⌁","Večerní používání",`Z ${answers.length} nových odpovědí uvádíš používání sítí před spaním ${yes}×. Starší minutové záznamy se do tohoto počtu nezahrnují.`]);
     }
   }
   $("insights").innerHTML=insights.slice(0,4).map(i=>`<div class="insight-card"><span class="insight-symbol">${i[0]}</span><div><strong>${i[1]}</strong><p>${i[2]}</p></div></div>`).join("");
 }
-initMinutePickers();
-$('appVersion').textContent='v2.0.0';$('todayLabel').textContent=new Date().toLocaleDateString('cs-CZ');$('rangeLabel').textContent='Posledních 7 dokončených dní';
-document.querySelectorAll('.nav-item').forEach(b=>b.onclick=()=>b.dataset.view==='entry'?openForm():showView(b.dataset.view));
-$('topAdd').onclick=$('historyAdd').onclick=()=>openForm();$('viewHistory').onclick=()=>showView('history');$('cancelEntry').onclick=()=>showView('dashboard');
-$('entryForm').onsubmit=e=>{e.preventDefault();if(!available())return;const f=new FormData(e.target);const record={schemaVersion:2,date:String(f.get('date'))};for(const key of ['socialMinutes','bedMinutes','sleepHours','sleepQuality','mood'])record[key]=Number(f.get(key));const error=C.validate(record);if(error){showToast(error);return;}if(entries.some(x=>x.date===record.date && x.date!==editingId)&&!confirm('Nahradit existující záznam tohoto dne?'))return;if(editingId&&editingId!==record.date)state.deleted.push(editingId);entries=entries.filter(x=>x.date!==record.date&&x.date!==editingId);entries.push({...C.clean(record),dirty:true});saveEntries();editingId=null;showView('dashboard');showToast('Záznam byl uložen místně.');sync();};
-$('exportCsv').onclick=()=>downloadBlob(C.csv(entries),'mindtrack-v2.csv','text/csv;charset=utf-8');
-const backup=document.createElement('button');backup.className='button button-secondary';backup.textContent='Záloha JSON';backup.onclick=()=>downloadBlob(JSON.stringify({version:2,entries:entries.map(C.clean)},null,2),'mindtrack-v2.json','application/json');$('exportCsv').parentElement.appendChild(backup);
+
+$('appVersion').textContent='v3.0.0';$('todayLabel').textContent=new Date().toLocaleDateString('cs-CZ');$('rangeLabel').textContent='Posledních 7 dokončených dní';
+document.querySelectorAll('.nav-item').forEach(b=>b.onclick=()=>b.dataset.view==='entry'?home():showView(b.dataset.view));
+$('topAdd').onclick=home;$('historyAdd').onclick=()=>openForm();$('doneOverview').onclick=()=>showView('dashboard');$('date').onchange=()=>{$('entryDateLabel').textContent=C.validDate($('date').value)?formatDate($('date').value):'—';};$('viewHistory').onclick=()=>showView('history');$('cancelEntry').onclick=()=>showView('dashboard');
+$('entryForm').onsubmit=e=>{e.preventDefault();if(!available())return;const f=new FormData(e.target);const record={schemaVersion:3,date:String(f.get('date')),socialMinutes:Number(f.get('socialH'))*60+Number(f.get('socialM')),sleepHours:(Number(f.get('sleepH'))*60+Number(f.get('sleepM')))/60,beforeBed:f.get('beforeBed')==='yes'?true:f.get('beforeBed')==='no'?false:null,sleepQuality:Number(f.get('sleepQuality')),mood:Number(f.get('mood'))};const error=C.validate(record);if(error){$('formMessage').textContent=error;return;}if(entries.some(x=>x.date===record.date && x.date!==editingId)&&!confirm('Nahradit existující záznam tohoto dne?'))return;if(editingId&&editingId!==record.date)state.deleted.push(editingId);entries=entries.filter(x=>x.date!==record.date&&x.date!==editingId);entries.push({...C.clean(record),dirty:true});saveEntries();editingId=null;sessionStorage.removeItem('mindtrack.draft.v3');home();showToast('Záznam byl uložen místně.');sync();};
+$('exportCsv').onclick=()=>downloadBlob(C.csv(entries),'mindtrack-v3.csv','text/csv;charset=utf-8');
+const backup=document.createElement('button');backup.className='button button-secondary';backup.textContent='Záloha JSON';backup.onclick=()=>downloadBlob(JSON.stringify({version:3,entries:entries.map(C.clean)},null,2),'mindtrack-v3.json','application/json');$('exportCsv').parentElement.appendChild(backup);
 $('importJson').onchange=async e=>{try{if(!available())return;const file=e.target.files[0];if(!file)return;const imported=C.parseBackup(await file.text());if(!confirm('Importovat '+imported.length+' záznamů? Shodné dny budou nahrazeny a při sdílení odeslány.'))return;const map=new Map(entries.map(x=>[x.date,x]));imported.forEach(x=>map.set(x.date,{...x,dirty:true}));entries=[...map.values()];state.deleted=state.deleted.filter(d=>!map.has(d));saveEntries();renderDashboard();renderHistory();sync();}catch(err){showToast(err.message);}finally{e.target.value='';}};
 $('clearAll').onclick=()=>{if(!available()||!confirm('Smazat všechny záznamy? Při obnovení sdílení budou smazány také z databáze.'))return;state.deleted.push(...entries.map(e=>e.date));entries=[];saveEntries();renderDashboard();renderHistory();sync();};
 $('privacySettings').onclick=()=>{$('cloudError').textContent='';$('consentCheck').checked=false;$('participantCode').textContent=state.ownerId?'Tvůj kód: '+state.ownerId:'';$('withdrawSharing').hidden=!state.ownerId;$('consentDialog').showModal();};
@@ -160,5 +100,8 @@ $('acceptSharing').onclick=async()=>{if(!available())return;if(!$('consentCheck'
 $('withdrawSharing').onclick=async()=>{if(!available()||!confirm('Smazat všechny odeslané záznamy a ukončit účast? Místní kopie zůstane.'))return;state.consent=false;saveEntries();busy=true;try{await cloud.identify(state.ownerId);await cloud.withdraw();state.deleted=[];entries.forEach(e=>e.dirty=false);saveEntries();status('Odeslané záznamy byly smazány. Sdílení je vypnuté.');$('consentDialog').close();}catch(e){$('cloudError').textContent='Sdílení je pozastavené, ale smazání se nepodařilo. Zkus ho znovu online. '+e.message;}finally{busy=false;}};
 $('syncNow').onclick=()=>state.consent?sync():$('privacySettings').click();window.addEventListener('online',sync);
 const legacy=localStorage.getItem('mindtrack.entries.v1');if(legacy){$('legacyExport').hidden=$('legacyNote').hidden=false;$('legacyExport').onclick=()=>downloadBlob(legacy,'mindtrack-puvodni-v1.json','application/json');}
-renderDashboard();if(state.consent)sync();
+
+$('entryForm').addEventListener('input',()=>{const fields=Object.fromEntries(new FormData($('entryForm')));sessionStorage.setItem('mindtrack.draft.v3',JSON.stringify({editingId,fields}));});
+function restoreDraft(){try{const d=JSON.parse(sessionStorage.getItem('mindtrack.draft.v3'));if(!d||!C.validDate(d.fields?.date)||d.fields.date>C.yesterday())return;if(!d.editingId&&entries.some(e=>e.date===d.fields.date))return;openForm(d.editingId?entries.find(e=>e.date===d.editingId):null);editingId=d.editingId;for(const [name,value]of Object.entries(d.fields)){for(const el of document.getElementsByName(name)){if(el.type==='radio')el.checked=el.value===value;else el.value=value;}}$('date').onchange();}catch{}}
+renderDashboard();home();restoreDraft();if(state.consent)sync();
 if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
