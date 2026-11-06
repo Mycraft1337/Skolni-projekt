@@ -1,10 +1,14 @@
-# MindTrack v2
+# MindTrack v3
 
 Denní zápis sociálních sítí, následujícího spánku a nálady. Stres, soustředění a volné poznámky se nesbírají. Datum označuje den používání sítí a nálady; spánek patří k noci, která po tomto dni následovala. Vyplňuje se ráno.
 
 ## Stav
 
-Kód integrace je připraven. Před použitím pro sběr dat je nutné nasadit SQL migraci, zapnout Anonymous Sign-Ins v Supabase a ověřit celý tok se dvěma testovacími účastníky. Nenahrazovat toto ověření pouhou kontrolou kódu.
+Databáze je připravená a Anonymous Sign-Ins byly zapnuty. Před sběrem dat zbývá ověřit celý tok v prohlížeči. Verze 3 otevírá rovnou zápis, pět otázek je na jedné stránce, čas se zadává hodinami a minutami. Rozpracovaný formulář přežije obnovení stejné karty. Po uložení je dostupná oprava.
+
+Nové večerní odpovědi jsou Ano/Ne (`before_bed`); starší `bed_minutes` zůstávají zachované. CSV obsahuje oddělené sloupce a verzi záznamu. Staré minuty se automaticky nepřevádějí na přímé odpovědi. Použij také migraci evening_yes_no; na existujícím projektu byla již provedena. Kontroly validace, importu/exportu, DOM formuláře a databázových omezení prošly; úplný vizuální a živý synchronizační test dosud neproběhl.
+
+Advisors upozorňují na povolené anonymní účty (záměr; RLS nadále omezuje přístup na vlastní user_id) a vypnutou ochranu uniklých hesel (aplikace hesla nepoužívá). Viz https://supabase.com/docs/guides/database/database-advisors?queryGroups=lint&lint=0012_auth_allow_anonymous_sign_ins a https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection .
 
 ## Supabase
 
@@ -20,7 +24,7 @@ Původní v1 data se automaticky nepřevádějí, protože měla jiné časové 
 
 ## Spuštění a ověření
 
-`python3 -m http.server 8000` a otevřít `/mindtrack/`.
+`python3 -m http.server 8000` a otevřít `/`.
 
 Ověřit zápis, opravu, export, import v2, výpadek internetu a opakované odeslání bez duplicit. Dva prohlížeče musí představovat dva oddělené účastníky. Po smazání dat prohlížeče nelze obnovit původní anonymní přihlášení jen ze zálohy záznamů.
 

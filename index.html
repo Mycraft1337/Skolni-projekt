@@ -7,7 +7,7 @@
   <meta name="description" content="MindTrack — osobní přehled sociálních sítí, spánku a nálady.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=2.0.0">
+  <link rel="stylesheet" href="./styles.css?v=3.0.0">
   <title>MindTrack — digitální pohoda</title>
 </head>
 <body>
@@ -34,13 +34,15 @@
         <button class="button button-primary top-add" id="topAdd">＋ Přidat záznam</button>
       </header>
 
+        <div class="sync-panel" role="status"><p id="syncStatus">Záznamy jsou pouze v tomto prohlížeči.</p><button class="text-button" id="syncNow" type="button">Zkusit odeslat</button></div>
+      <nav class="quick-nav"><button type="button" data-view="entry" class="nav-item">Zápis</button><button type="button" data-view="dashboard" class="nav-item">Přehled</button><button type="button" data-view="history" class="nav-item">Historie</button></nav>
       <section class="view active" id="dashboardView">
         <div class="page-heading">
           <div><p class="eyebrow">OSOBNÍ DASHBOARD</p><h1>Jak se ti daří?</h1><p class="muted">Sleduj souvislosti mezi digitálními návyky, spánkem a náladou.</p></div>
           <div class="date-chip" id="rangeLabel">Posledních 7 dní</div>
         </div>
 
-        <div class="sync-panel" role="status"><p id="syncStatus">Záznamy jsou pouze v tomto prohlížeči.</p><button class="text-button" id="syncNow" type="button">Zkusit odeslat</button></div>
+
         <div class="stat-grid">
           <article class="stat-card"><div class="stat-top"><span class="stat-label">Čas na sítích</span><span class="stat-icon purple">◷</span></div><div class="stat-value" id="avgSocial">—</div><div class="stat-caption">průměr za den</div></article>
           <article class="stat-card"><div class="stat-top"><span class="stat-label">Délka spánku</span><span class="stat-icon blue">☾</span></div><div class="stat-value" id="avgSleep">—</div><div class="stat-caption">průměr za noc</div></article>
@@ -69,66 +71,10 @@
 
       <section class="view" id="entryView">
         <div class="page-heading"><div><p class="eyebrow">DENNÍ CHECK-IN</p><h1>Ranní záznam</h1><p class="muted">Vyplň předchozí den a noc, která po něm následovala. Čas na sítích opiš z přehledu telefonu; jinak použij odhad.</p></div></div>
-        <form id="entryForm" class="entry-layout">
-          <div class="form-main">
-            <article class="panel form-panel">
-              <div class="section-title"><span class="step-number">1</span><div><h2>Digitální návyky</h2><p class="muted">Kolik času jsi strávil/a na sociálních sítích ve vybraný den?</p></div></div>
-              <label class="field-label" for="date">Den používání sítí a hodnocení nálady</label><input id="date" name="date" type="date" required>
-              <div class="field-grid">
-                <div>
-                  <label class="field-label" for="socialMinutesWheel">Celkový čas na sítích (minuty)</label>
-                  <div class="minute-picker" data-input="socialMinutes" data-max="1440" data-step="5" data-unit="minutes">
-                    <button class="minute-step" type="button" data-direction="-1" aria-label="O pět minut méně">▲</button>
-                    <div class="minute-wheel" id="socialMinutesWheel" tabindex="0" role="listbox" aria-label="Celkový čas na sociálních sítích"></div>
-                    <button class="minute-step" type="button" data-direction="1" aria-label="O pět minut více">▼</button>
-                  </div>
-                  <input id="socialMinutes" name="socialMinutes" type="hidden" value="0">
-                  <small class="field-help">Posouvej kolečkem nebo šipkami po 5 minutách.</small>
-                </div>
-                <div>
-                  <label class="field-label" for="bedMinutesWheel">Sítě před spaním (minuty)</label>
-                  <div class="minute-picker" data-input="bedMinutes" data-max="60" data-step="5" data-unit="minutes">
-                    <button class="minute-step" type="button" data-direction="-1" aria-label="O pět minut méně">▲</button>
-                    <div class="minute-wheel" id="bedMinutesWheel" tabindex="0" role="listbox" aria-label="Čas na sociálních sítích před spaním"></div>
-                    <button class="minute-step" type="button" data-direction="1" aria-label="O pět minut více">▼</button>
-                  </div>
-                  <input id="bedMinutes" name="bedMinutes" type="hidden" value="0">
-                  <small class="field-help">Přibližně poslední hodina před usnutím.</small>
-                </div>
-              </div>
-            </article>
-            <article class="panel form-panel">
-              <div class="section-title"><span class="step-number">2</span><div><h2>Spánek</h2><p class="muted">Hodnoť noc po vybraném dni. Například k pondělí patří spánek z pondělí na úterý.</p></div></div>
-              <div class="field-grid">
-                <div>
-                  <label class="field-label" for="sleepHoursWheel">Délka spánku</label>
-                  <div class="minute-picker" data-input="sleepHours" data-max="24" data-step="0.25" data-unit="hours">
-                    <button class="minute-step" type="button" data-direction="-1" aria-label="O patnáct minut méně">▲</button>
-                    <div class="minute-wheel" id="sleepHoursWheel" tabindex="0" role="listbox" aria-label="Délka spánku"></div>
-                    <button class="minute-step" type="button" data-direction="1" aria-label="O patnáct minut více">▼</button>
-                  </div>
-                  <input id="sleepHours" name="sleepHours" type="hidden" value="8">
-                  <small class="field-help">Posouvej po 15 minutách.</small>
-                </div>
-                <div><label class="field-label" for="sleepQuality">Kvalita spánku</label><select id="sleepQuality" name="sleepQuality" required><option value="">Vyber hodnocení</option><option value="1">1 — velmi špatná</option><option value="2">2 — spíše špatná</option><option value="3">3 — průměrná</option><option value="4">4 — dobrá</option><option value="5">5 — velmi dobrá</option></select></div>
-              </div>
-            </article>
-            <article class="panel form-panel">
-              <div class="section-title"><span class="step-number">3</span><div><h2>Jak ses cítil/a?</h2><p class="muted">Zhodnoť celkovou náladu během vybraného dne.</p></div></div>
-              <p class="field-label" id="moodLabel">Nálada</p>
-              <div class="rating-row" id="moodRating" role="radiogroup" aria-labelledby="moodLabel">
-                <label class="rating-option"><input type="radio" name="mood" aria-label="1 — velmi špatná" value="1" required><span>😞</span><small>1</small></label>
-                <label class="rating-option"><input type="radio" name="mood" aria-label="2 — spíše špatná" value="2"><span>🙁</span><small>2</small></label>
-                <label class="rating-option"><input type="radio" name="mood" aria-label="3 — neutrální" value="3"><span>😐</span><small>3</small></label>
-                <label class="rating-option"><input type="radio" name="mood" aria-label="4 — spíše dobrá" value="4"><span>🙂</span><small>4</small></label>
-                <label class="rating-option"><input type="radio" name="mood" aria-label="5 — velmi dobrá" value="5"><span>😄</span><small>5</small></label>
-              </div>
-            </article>
-            <div class="form-actions"><button type="button" class="button button-secondary" id="cancelEntry">Zrušit</button><button type="submit" class="button button-primary">Uložit záznam <span>→</span></button></div>
-            <p id="formMessage" class="form-message" role="status"></p>
-          </div>
-          <aside class="form-aside"><div class="aside-card"><span class="aside-icon">🔒</span><h3>Soukromí na prvním místě</h3><p>Záznamy se ukládají do tohoto prohlížeče. Po zapnutí sdílení se posílají také do databáze školního projektu.</p><p>Sdílí se pět hodnocených údajů, datum a náhodný kód účastníka. Jméno ani e-mail se nevyplňují.</p></div><div class="aside-card soft"><span class="aside-icon">💡</span><h3>Bez hodnocení</h3><p>Nejde o to mít „dokonalé“ hodnoty. Cílem je všimnout si vlastních návyků bez obviňování sebe sama.</p></div></aside>
-        </form>
+        <div id="entryDone" class="panel" hidden><h2>Pro tento den už máš hotovo ✓</h2><p id="doneDate"></p><button id="editToday" class="button button-primary" type="button">Upravit odpovědi</button> <button id="doneOverview" class="button button-secondary" type="button">Zobrazit přehled</button></div>
+        <form id="entryForm" class="simple-form panel">
+          <details><summary>Záznam za <strong id="entryDateLabel"></strong> · změnit datum</summary><label for="date">Den používání sítí a nálady</label><input id="date" name="date" type="date" required></details>
+<fieldset class="question"><legend>1. Kolik času jsi strávil/a na sociálních sítích?</legend><div class="duration-input"><label>Hodiny<input id="socialH" name="socialH" type="number" inputmode="numeric" min="0" max="24" step="1" required></label><label>Minuty<input id="socialM" name="socialM" type="number" inputmode="numeric" min="0" max="59" step="1" required></label></div></fieldset><p class="field-help">Za vybraný den. Ideálně podle přehledu telefonu; jinak odhad.</p><fieldset class="question"><legend>2. Používal/a jsi sociální sítě během poslední hodiny před usnutím?</legend><div class="simple-rating binary"><label><input type="radio" name="beforeBed" value="yes" required><span>Ano</span></label><label><input type="radio" name="beforeBed" value="no" required><span>Ne</span></label></div><p id="oldEvening" class="field-help" hidden>Starší záznam obsahoval minuty. Při úpravě prosím zvol Ano nebo Ne.</p></fieldset><fieldset class="question"><legend>3. Kolik hodin jsi spal/a během následující noci?</legend><div class="duration-input"><label>Hodiny<input id="sleepH" name="sleepH" type="number" inputmode="numeric" min="0" max="24" step="1" required></label><label>Minuty<input id="sleepM" name="sleepM" type="number" inputmode="numeric" min="0" max="59" step="1" required></label></div></fieldset><p class="field-help">Přibližný čas skutečného spánku, ne jen čas v posteli.</p><fieldset class="question"><legend>4. Jak dobře ses během této noci vyspal/a?</legend><div class="simple-rating"><label><input type="radio" name="sleepQuality" value="1" required><span><b>1</b>Velmi špatně</span></label><label><input type="radio" name="sleepQuality" value="2" required><span><b>2</b>Spíše špatně</span></label><label><input type="radio" name="sleepQuality" value="3" required><span><b>3</b>Ani dobře, ani špatně</span></label><label><input type="radio" name="sleepQuality" value="4" required><span><b>4</b>Spíše dobře</span></label><label><input type="radio" name="sleepQuality" value="5" required><span><b>5</b>Velmi dobře</span></label></div></fieldset><fieldset class="question"><legend>5. Jak ses během vybraného dne celkově cítil/a?</legend><div class="simple-rating"><label><input type="radio" name="mood" value="1" required><span><b>1</b>Velmi špatně</span></label><label><input type="radio" name="mood" value="2" required><span><b>2</b>Spíše špatně</span></label><label><input type="radio" name="mood" value="3" required><span><b>3</b>Ani dobře, ani špatně</span></label><label><input type="radio" name="mood" value="4" required><span><b>4</b>Spíše dobře</span></label><label><input type="radio" name="mood" value="5" required><span><b>5</b>Velmi dobře</span></label></div></fieldset><div class="form-actions"><button type="button" class="button button-secondary" id="cancelEntry">Přehled</button><button type="submit" class="button button-primary">Uložit záznam</button></div><p id="formMessage" role="alert"></p></form>
       </section>
 
       <section class="view" id="historyView">
@@ -143,7 +89,7 @@
   <dialog class="consent-dialog" id="consentDialog" aria-labelledby="consentTitle">
     <h2 id="consentTitle">Sdílení pro školní projekt</h2>
     <p>Po zapnutí sdílení dostane autor projektu Thomas Eversfield tvé záznamy k vyhodnocení souvislostí mezi sociálními sítěmi, spánkem a náladou.</p>
-    <ul><li>Odesílá se čas na sítích, čas před spaním, délka a kvalita následujícího spánku, nálada a datum.</li><li>Náhodný kód propojí tvé jednotlivé dny. Nejde tedy o úplně nepropojitelné záznamy. Jméno ani e-mail aplikace nevyžaduje.</li><li>Data se uloží v Supabase; provozovatel při přenosu zpracovává i technické údaje o spojení.</li></ul>
+    <ul><li>Odesílá se čas na sítích, používání před spaním (Ano/Ne), délka a kvalita následujícího spánku, nálada a datum.</li><li>Náhodný kód propojí tvé jednotlivé dny. Nejde tedy o úplně nepropojitelné záznamy. Jméno ani e-mail aplikace nevyžaduje.</li><li>Data se uloží v Supabase; provozovatel při přenosu zpracovává i technické údaje o spojení.</li></ul>
     <p id="participantCode" class="participant-code"></p>
     <p>Záznamy vyplňuj ve stejném prohlížeči. Smazání jeho dat nebo přechod na jiné zařízení může znamenat ztrátu přístupu ke svému kódu.</p>
     <p class="consent-note">Sdílení je dobrovolné. Můžeš zůstat jen u místního ukládání. Zapnutí odešle také dosavadní záznamy nové verze. Sdílení lze pozastavit nebo online smazat odeslaná data; již vytvořené souhrny tím nelze vzít zpět.</p>
@@ -153,9 +99,9 @@
     <p id="cloudError" role="alert"></p>
     <button class="text-button" id="closePrivacy" type="button">Zavřít</button>
   </dialog>
-  <script src="./config.js?v=2.0.0"></script>
-  <script src="./core.js?v=2.0.0"></script>
-  <script src="./cloud.js?v=2.0.0"></script>
-  <script src="./app.js?v=2.0.0"></script>
+  <script src="./config.js?v=3.0.0"></script>
+  <script src="./core.js?v=3.0.0"></script>
+  <script src="./cloud.js?v=3.0.0"></script>
+  <script src="./app.js?v=3.0.0"></script>
 </body>
 </html>
