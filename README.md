@@ -78,7 +78,7 @@ pokud byla otevřená stará verze, zavři a znovu otevři aplikaci z plochy.
 - Kontrolují se pouze odeslané odpovědi. Místní/offline záznamy server nevidí.
 - Každá připomínka má jeden atomicky rezervovaný pokus za místní den. Neúspěšné pokusy se ten den neopakují, aby při nejistém výsledku nevznikaly duplicity.
 - Odesílání je možné v 15minutovém okně po nastaveném čase; TTL zprávy je 15 minut. Výpadek serveru, offline zařízení nebo režim soustředění může způsobit zpoždění či nedoručení.
-- Školní prototyp zpracuje nejvýše 1000 odběrů v jednom běhu; před větším nasazením je potřeba dávkování/fronta.
+- Výběr a rezervace právě splatných připomínek probíhá v databázi; do funkce se neposílá celý seznam odběrů. Odesílání běží po dávkách 25, nejvýše 5 souběžně, maximálně 100 pokusů na běh a s časovým rozpočtem 40 sekund před zahájením další dávky. Nevybrané připomínky zůstávají dostupné pro další minutový běh, dokud trvá 15minutové okno.
 - HTTP 404/410 odstraní neplatný odběr. Vypnutí smaže odběr na serveru a odhlásí zařízení.
 - Ukončení účasti přes aplikaci vypne i serverový odběr. Pozastavení sdílení samo o sobě připomínky nevypíná.
 - Zpráva obsahuje jen obecnou připomínku, datum a odkaz na příslušný formulář, žádné odpovědi.
@@ -108,3 +108,24 @@ Zdroje:
 - https://supabase.com/docs/guides/functions/schedule-functions
 - https://supabase.com/docs/guides/functions/auth
 - https://github.com/web-push-libs/web-push
+
+### Optimalizace výběru připomínek
+
+Migrace `20261107125445_due_reminders_only.sql` a Edge Function v2 jsou již nasazené.
+Serverová RPC `mindtrack_claim_due_reminders` filtruje časové pásmo, splatnost, již hotové
+zápisy a již rezervovaná odeslání přímo v Postgresu. V jediné transakci rezervuje dávku;
+unikátní klíč chrání i proti souběžným voláním. Funkce je SECURITY INVOKER a spustit ji smí
+pouze service_role. Klientská oprávnění se nerozšiřují.
+
+Plné údaje odběru se nově načítají až těsně před odesláním. Při dvou připomínkách denně
+jde běžně o 2 načtení namísto 1440 na uživatele a den (bez ručních testů a nastavení).
+To je poměr počtu načtení, nikoliv měření úspory celkové účtované egress kvóty.
+Prázdné běhy a konfigurace mají stále malou režii; počet minutových invokací se nemění.
+Databáze zatím kontroluje rozvrhy lokálně; pro velmi velký provoz by následoval indexovaný
+čas příštího odeslání nebo samostatná fronta.
+
+Ověření: `node tests/dispatcher.cjs`; `tests/due-reminders.sql` běží v transakci s rollbackem.
+SQL test použil 1005 syntetických účastníků: z 1005 odběrů vrátil pouze 1 splatný, včetně
+odběru za původní hranicí 1000. Ověřil opakované volání bez duplicit, letní čas,
+vynechání hotového spánku, expirované okno a postupné vybrání všech 1005 přes dávky.
+Nejde o test doručení 1005 oznámení ani garanci takové kapacity v reálném provozu.
