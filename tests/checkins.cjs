@@ -14,7 +14,7 @@ assert.equal(C.shiftDay('2026-01-01',-1),'2025-12-31');
 assert.equal(C.shiftDay('2024-03-01',-1),'2024-02-29');
 assert.equal(C.row(evening,'test').sleep_hours,null);
 assert.equal(C.fromRow(C.row(evening,'test')).sleepHours,null);
-assert.equal(C.csv([evening]).split('\r\n')[1],`"4";"${today}";"0";"";"";"";"";"3"`);
+assert.equal(C.csv([evening]).split('\r\n')[1],`"4";"${today}";"0";"";"";"";"";"3";"";"";"";""`);
 for(const version of [2,3]){
  const legacy={schemaVersion:version,date:yesterday,socialMinutes:80,mood:4,sleepHours:8,sleepQuality:3,...(version===2?{bedMinutes:20}:{beforeBed:true})};
  assert.deepEqual(C.parseBackup(JSON.stringify({version,entries:[legacy]})),[legacy]);

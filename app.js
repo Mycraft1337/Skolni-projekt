@@ -1,24 +1,45 @@
 const C=MindTrackCore, $=id=>document.getElementById(id), KEY='mindtrack.state.v2';
-let state={entries:[],deleted:[],consent:true,ownerId:null},toastTimer,busy=false;
+let state={entries:[],deleted:[],consent:true,ownerId:null},toastTimer,busy=false,syncing=false,syncAgain=false,retryTimer;
+let rangeDays=7;
 try {const saved=JSON.parse(localStorage.getItem(KEY));if(saved && Array.isArray(saved.entries))state=saved;}catch{}
 let entries=state.entries;
 const cloud=new MindTrackCloud(window.MINDTRACK_CONFIG);
 function updateSharingNotice(){ $('sharingNotice').textContent=state.consent?'Uložením se odpovědi automaticky odešlou autorovi školního projektu pod náhodným kódem, bez jména a e-mailu.':'Odesílání je vypnuté. Odpovědi se uloží pouze do tohoto prohlížeče.';}
 function saveEntries(){updateSharingNotice();entries.sort((a,b)=>b.date.localeCompare(a.date));state.entries=entries;localStorage.setItem(KEY,JSON.stringify(state));}
 function status(message){$('syncStatus').textContent=message;}
+function entrySyncLabel(e){if(e.localOnly)return 'Uloženo v zařízení';return e.dirty?(state.consent?'Čeká na odeslání':'Uloženo v zařízení'):'Odesláno';}
+function refreshStatus(){renderDashboard();renderHistory();if(C.validDate($('date').value))updateChoices();}
+function queueDelete(day){state.deleted=[...new Set([...state.deleted,day])];state.deletionVersions=state.deletionVersions||{};state.deletionVersions[day]=crypto.randomUUID();}
 async function sync(){
- if(busy || !state.consent || (!entries.some(e=>e.dirty)&&!state.deleted.length))return;
- busy=true;status('Odesílám změny…');
- try{await cloud.identify(state.ownerId,true);state.ownerId=cloud.userId;saveEntries();await cloud.enroll();await cloud.upload(entries.filter(e=>e.dirty),state.deleted);entries.forEach(e=>e.dirty=false);state.deleted=[];saveEntries();status('Změny byly odeslány do školního projektu.');}
- catch(e){status('Záznamy zůstávají místně. Odeslání se nepodařilo: '+e.message);}
- finally{busy=false;}
+ if(syncing){syncAgain=true;return;}
+ if(busy||!state.consent||(!entries.some(e=>e.dirty)&&!state.deleted.length))return;
+ syncing=true;syncAgain=false;clearTimeout(retryTimer);status('Odesílám změny…');let success=false;
+ const batch=entries.filter(e=>e.dirty).map(e=>JSON.parse(JSON.stringify(e)));
+ const deleted=[...state.deleted],versions={...state.deletionVersions};
+ try{
+  await cloud.identify(state.ownerId,true);state.ownerId=cloud.userId;saveEntries();await cloud.enroll();
+  if(!state.consent)return;
+  const saved=await cloud.upload(batch,deleted)||[];
+  for(const sent of batch){const current=entries.find(e=>e.date===sent.date);if(current&&JSON.stringify(current)===JSON.stringify(sent)){const server=saved.find(e=>e.date===sent.date);Object.assign(current,server||{}, {dirty:false,localOnly:false});delete current.changedParts;}}
+  state.deleted=state.deleted.filter(d=>!deleted.includes(d)||state.deletionVersions?.[d]!==versions[d]);
+  saveEntries();status('Změny byly odeslány.');success=true;
+ }catch(e){status('Uloženo v zařízení. Čeká na připojení: '+e.message);}
+ finally{syncing=false;refreshStatus();if(state.consent){if(success&&(syncAgain||entries.some(e=>e.dirty)||state.deleted.length))queueMicrotask(sync);else if(!success)retryTimer=setTimeout(sync,30000);}}
+}
+async function restoreCloud(){
+ if(!state.ownerId||syncing||busy)return;
+ syncing=true;
+ try{await cloud.identify(state.ownerId);const remote=await cloud.load();const map=new Map(remote.map(e=>[e.date,{...e,dirty:false}]));for(const e of entries)if(e.dirty||e.localOnly||(!state.consent&&!map.has(e.date)))map.set(e.date,e);for(const day of state.deleted)map.delete(day);entries=[...map.values()];saveEntries();status('Odeslaná historie byla načtena.');refreshStatus();}
+ catch(e){status('Historii se nepodařilo načíst: '+e.message);}
+ finally{syncing=false;if(entries.some(e=>e.dirty))sync();}
 }
 function available(){if(busy){showToast('Počkej na dokončení odesílání.');return false;}return true;}
 function showView(name){document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===name+'View'));document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view===name));if(name==='dashboard')renderDashboard();if(name==='history')renderHistory();window.scrollTo(0,0);}
 let activePeriod=null;
 const DRAFT_KEY='mindtrack.drafts.v4';
+try{if(!localStorage.getItem(DRAFT_KEY)&&sessionStorage.getItem(DRAFT_KEY))localStorage.setItem(DRAFT_KEY,sessionStorage.getItem(DRAFT_KEY));}catch{}
 function draftKey(){return $('date').value+':'+activePeriod;}
-function readDrafts(){try{return JSON.parse(sessionStorage.getItem(DRAFT_KEY))||{};}catch{return {};}}
+function readDrafts(){try{return JSON.parse(localStorage.getItem(DRAFT_KEY))||{};}catch{return {};}}
 function home(day=C.today()){
  if(!available())return;
  activePeriod=null;showView('entry');$('entryForm').hidden=true;
@@ -31,7 +52,7 @@ function updateChoices(){
    const key=period==='morning'?C.shiftDay(day,-1):day;
    const record=entries.find(e=>e.date===key);
    const done=period==='morning'?C.hasMorning(record):C.hasEvening(record);
-   $(period+'Status').textContent=(done?'✓ Vyplněno · upravit':'Nevyplněno · otevřít')+' · '+(period==='morning'?'noc '+formatDate(key)+' → '+formatDate(day):formatDate(day));
+   $(period+'Status').textContent=(done?'✓ Vyplněno · upravit':'Nevyplněno · otevřít')+' · '+(done?entrySyncLabel(record)+' · ':'')+(period==='morning'?'noc '+formatDate(key)+' → '+formatDate(day):formatDate(day));
    $(period+'Choice').setAttribute('aria-expanded',String(activePeriod===period));
  }
 }
@@ -55,10 +76,10 @@ function openForm(period){
  if(draft)for(const [name,value]of Object.entries(draft)){for(const el of document.getElementsByName(name)){if(el.type==='radio')el.checked=el.value===value;else el.value=value;}}
  updatePeriodLabels();updateChoices();refreshWheels();
 }
-function renderDashboard(){const list=recentDays();for(const [id,key,formatter] of [['avgSocial','socialMinutes',minutesLabel],['avgSleep','sleepHours',hoursLabel],['avgMood','mood',v=>v.toFixed(1)+' / 5']]){const v=average(list,key);$(id).textContent=v===null?'—':formatter(v);}$('entryCount').textContent=list.length;$('trendChart').innerHTML=makeChart(list);renderInsights(list);$('recentEntries').innerHTML=entries.slice(0,4).map(entryRow).join('')||'Zatím nejsou záznamy.';wireRows();}
-function entryRow(e){return `<div class="entry-row"><div>${esc(formatDate(e.date))}<small class="entry-sub">Den a následující noc</small></div><div>${e.socialMinutes==null?'—':minutesLabel(e.socialMinutes)}<small> na sítích</small></div><div>${e.sleepHours==null?'—':hoursLabel(e.sleepHours)}<small> spánek${e.sleepQuality==null?'':` (${e.sleepQuality}/5)`}</small></div><div>Nálada ${e.mood==null?'—':e.mood+'/5'}</div><div class="row-actions"><button class="text-button" data-edit="${esc(e.date)}" data-period="evening">Večer</button><button class="text-button" data-edit="${esc(e.date)}" data-period="morning" ${e.date>=C.today()?'disabled title="Zapiš až následující ráno"':''}>Noc / ráno</button><button class="icon-button" data-delete="${esc(e.date)}" aria-label="Smazat">×</button></div></div>`;}
-function renderHistory(){$('historyCount').textContent=entries.length+' záznamů';$('historyEntries').innerHTML=entries.map(entryRow).join('')||'Zatím nejsou záznamy.';wireRows();}
-function wireRows(){document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{home(b.dataset.period==='morning'?C.shiftDay(b.dataset.edit,1):b.dataset.edit);openForm(b.dataset.period);});document.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>{if(!available()||!confirm('Smazat tento den? Po obnovení sdílení se smaže také z databáze.'))return;state.deleted.push(b.dataset.delete);entries=entries.filter(e=>e.date!==b.dataset.delete);saveEntries();renderDashboard();renderHistory();sync();});}
+function renderDashboard(){const list=recentDays();for(const [id,key,formatter] of [['avgSocial','socialMinutes',minutesLabel],['avgSleep','sleepHours',hoursLabel],['avgMood','mood',v=>v.toFixed(1)+' / 5']]){const v=average(list,key);$(id).textContent=v===null?'—':formatter(v);}$('entryCount').textContent=list.filter(e=>C.hasMorning(e)&&C.hasEvening(e)).length;for(const [id,key] of [['socialCount','socialMinutes'],['sleepCount','sleepHours'],['moodCount','mood']])$(id).textContent=list.filter(e=>e[key]!=null).length+' odpovědí';$('trendChart').innerHTML=makeChart(list);renderInsights(list);$('recentEntries').innerHTML=entries.slice(0,4).map(entryRow).join('')||'Zatím nejsou záznamy.';wireRows();}
+function entryRow(e){return `<div class="entry-row"><div>${esc(formatDate(e.date))}<small class="entry-sub">Den a následující noc · ${entrySyncLabel(e)}</small></div><div>${e.socialMinutes==null?'—':minutesLabel(e.socialMinutes)}<small> na sítích</small></div><div>${e.sleepHours==null?'—':hoursLabel(e.sleepHours)}<small> spánek${e.sleepQuality==null?'':` (${e.sleepQuality}/5)`}</small></div><div>Nálada ${e.mood==null?'—':e.mood+'/5'}</div><div class="row-actions"><button class="text-button" data-edit="${esc(e.date)}" data-period="evening">Večer</button><button class="text-button" data-edit="${esc(e.date)}" data-period="morning" ${e.date>=C.today()?'disabled title="Zapiš až následující ráno"':''}>Noc / ráno</button><button class="icon-button" data-delete="${esc(e.date)}" aria-label="Smazat">×</button></div></div>`;}
+function renderHistory(){renderCalendar();$('historyCount').textContent=entries.length+' záznamů';$('historyEntries').innerHTML=entries.map(entryRow).join('')||'Zatím nejsou záznamy.';wireRows();}
+function wireRows(){document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{home(b.dataset.period==='morning'?C.shiftDay(b.dataset.edit,1):b.dataset.edit);openForm(b.dataset.period);});document.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>{if(!available()||!confirm('Smazat tento den? Po obnovení sdílení se smaže také z databáze.'))return;queueDelete(b.dataset.delete);entries=entries.filter(e=>e.date!==b.dataset.delete);saveEntries();renderDashboard();renderHistory();sync();});}
 function downloadBlob(content,name,type){const url=URL.createObjectURL(new Blob([content],{type}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 function formatDate(iso, options={day:"numeric",month:"short"}) {
   return new Date(`${iso}T12:00:00`).toLocaleDateString("cs-CZ", options);
@@ -69,7 +90,8 @@ function minutesLabel(value) {
   const h = Math.floor(m/60), rest = m%60;
   return rest ? `${h} h ${rest} min` : `${h} h`;
 }
-function hoursLabel(value) {
+function hoursLabel(value) {return minutesLabel(Number(value)*60);}
+function unusedHoursLabel(value) {
   const h = Number(value)||0;
   const whole = Math.floor(h), mins = Math.round((h-whole)*60);
   return mins ? `${whole} h ${mins} min` : `${whole} h`;
@@ -78,7 +100,7 @@ function average(arr, key) {
   const vals = arr.filter(e=>e[key]!=null).map(e=>Number(e[key])).filter(Number.isFinite);
   return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
 }
-function recentDays(n=7) {
+function recentDays(n=rangeDays) {
   const end=C.yesterday(), d=new Date(end+'T12:00:00');d.setDate(d.getDate()-(n-1));
   return entries.filter(e=>e.date>=C.dateISO(d) && e.date<=end);
 }
@@ -94,18 +116,18 @@ function showToast(message) {
 function makeChart(list) {
   if(!list.length) return '<div class="empty-state">Zatím tu nejsou data. Přidej svůj první denní záznam.</div>';
   const days=[];
-  for(let i=6;i>=0;i--){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-1-i);const iso=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;days.push({iso,label:d.toLocaleDateString("cs-CZ",{weekday:"short"}),entry:list.find(e=>e.date===iso)});}
+  for(let i=rangeDays-1;i>=0;i--){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-1-i);const iso=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;days.push({iso,label:d.toLocaleDateString("cs-CZ",rangeDays>7?{day:"numeric",month:"numeric"}:{weekday:"short"}),entry:list.find(e=>e.date===iso)});}
   const W=620,H=230,left=42,right=18,top=20,bottom=35,plotW=W-left-right,plotH=H-top-bottom;
-  const x=i=>left+(days.length===1?plotW/2:i*plotW/6);
+  const x=i=>left+(days.length===1?plotW/2:i*plotW/(rangeDays-1));
   const y=v=>top+plotH-(v/24)*plotH;
-  let svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Graf času na sociálních sítích a délky spánku za posledních sedm dokončených dní">`;
+  let svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Graf času na sociálních sítích a délky spánku za vybrané období">`;
   [0,6,12,18,24].forEach(v=>{svg+=`<line x1="${left}" y1="${y(v)}" x2="${W-right}" y2="${y(v)}" stroke="#edf0f6" stroke-width="1"/><text x="${left-10}" y="${y(v)+4}" fill="#a1a9b7" font-size="10" text-anchor="end">${v}</text>`;});
   const path=(key,scale)=>days.map((d,i)=>d.entry?`${i?"L":"M"} ${x(i)} ${y(Math.min(24,Number(d.entry[key])*scale))}`:"").filter(Boolean).join(" ");
   // Break lines where dates are missing.
   const segments=key=>{let out=[],cur=[];days.forEach((d,i)=>{if(d.entry && d.entry[key]!=null)cur.push([x(i),y(Math.min(24,Number(d.entry[key])*(key==="socialMinutes"?1/60:1)))]);else if(cur.length){out.push(cur);cur=[];}});if(cur.length)out.push(cur);return out;};
   segments("socialMinutes").forEach(seg=>{svg+=`<polyline fill="none" stroke="#7967e8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="${seg.map(p=>p.join(",")).join(" ")}"/>`;seg.forEach(p=>svg+=`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="#7967e8" stroke="#fff" stroke-width="2"/>`);});
   segments("sleepHours").forEach(seg=>{svg+=`<polyline fill="none" stroke="#4698df" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="${seg.map(p=>p.join(",")).join(" ")}"/>`;seg.forEach(p=>svg+=`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="#4698df" stroke="#fff" stroke-width="2"/>`);});
-  days.forEach((d,i)=>{svg+=`<text x="${x(i)}" y="${H-12}" fill="#929bad" font-size="10" text-anchor="middle">${esc(d.label)}</text>`;});
+  days.forEach((d,i)=>{if(rangeDays>7&&i%Math.ceil(rangeDays/7)!==0&&i!==rangeDays-1)return;svg+=`<text x="${x(i)}" y="${H-12}" fill="#929bad" font-size="10" text-anchor="middle">${esc(d.label)}</text>`;});
   svg+="</svg>";return svg;
 }
 function renderInsights(list) {
@@ -114,7 +136,7 @@ function renderInsights(list) {
   if(list.length<3) insights.push(["✦","Sbírej první data",`Máš ${list.length} úplných dvojic den + noc. Po alespoň třech dnech půjde lépe sledovat vlastní vzorce.`]);
   if(list.length>=3) {
     const s=average(list,"socialMinutes"), sl=average(list,"sleepHours"), m=average(list,"mood");
-    insights.push(["◷","Čas na sítích",`Z úplných dvojic za posledních 7 dokončených dní máš průměr ${minutesLabel(s)} denně. Ber to jako orientační přehled, ne jako dobré nebo špatné skóre.`]);
+    insights.push(["◷","Čas na sítích",`Z úplných dvojic za vybrané období máš průměr ${minutesLabel(s)} denně. Ber to jako orientační přehled, ne jako dobré nebo špatné skóre.`]);
     insights.push(["☾","Spánek",`Průměrná délka spánku v záznamech je ${hoursLabel(sl)}. Kvalita spánku se může lišit den ode dne.`]);
     insights.push(["☺","Nálada",`Průměrné hodnocení nálady je ${m.toFixed(1).replace(".",",")} z 5. Jednotlivé hodnocení je subjektivní a běžně kolísá.`]);
     if(list.length>=5) {
@@ -125,7 +147,7 @@ function renderInsights(list) {
   $("insights").innerHTML=insights.slice(0,4).map(i=>`<div class="insight-card"><span class="insight-symbol">${i[0]}</span><div><strong>${i[1]}</strong><p>${i[2]}</p></div></div>`).join("");
 }
 
-$('appVersion').textContent='v4.1.0';$('todayLabel').textContent=new Date().toLocaleDateString('cs-CZ');$('rangeLabel').textContent='Posledních 7 dokončených dní';
+$('appVersion').textContent='v5.0.0 · build 20261107.1';$('todayLabel').textContent=new Date().toLocaleDateString('cs-CZ');$('rangeLabel').textContent='Posledních 7 dokončených dní';$('rangeDays').onchange=()=>{rangeDays=Number($('rangeDays').value);$('rangeLabel').textContent='Posledních '+rangeDays+' dokončených dní';renderDashboard();};
 document.querySelectorAll('.nav-item').forEach(b=>b.onclick=()=>b.dataset.view==='entry'?home():showView(b.dataset.view));
 $('topAdd').onclick=()=>home();$('historyAdd').onclick=()=>home();$('viewHistory').onclick=()=>showView('history');$('cancelEntry').onclick=()=>home($('date').value);
 $('date').onchange=()=>{if(!C.validDate($('date').value)||$('date').value>C.today()||$('date').value<'2020-01-02'){$('date').value=C.today();}home($('date').value);};
@@ -140,23 +162,23 @@ $('entryForm').onsubmit=e=>{
  if(morning){record.schemaVersion=4;delete record.bedMinutes;record.sleepHours=(Number(f.get('sleepH'))*60+Number(f.get('sleepM')))/60;record.sleepQuality=Number(f.get('sleepQuality'));record.beforeBed=f.get('beforeBed')==='yes'?true:f.get('beforeBed')==='no'?false:null;}
  else{record.socialMinutes=Number(f.get('socialH'))*60+Number(f.get('socialM'));record.mood=Number(f.get('mood'));if(old?.schemaVersion!==2)record.schemaVersion=4;}
  const error=C.validate(record);if(error){$('formMessage').textContent=error;return;}
- entries=entries.filter(x=>x.date!==day);entries.push({...C.clean(record),dirty:true});state.deleted=state.deleted.filter(d=>d!==day);saveEntries();
- const drafts=readDrafts();delete drafts[draftKey()];sessionStorage.setItem(DRAFT_KEY,JSON.stringify(drafts));
+ entries=entries.filter(x=>x.date!==day);record[activePeriod+'RecordedAt']=new Date().toISOString();entries.push({...C.clean(record),dirty:true,changedParts:[...new Set([...(old?.changedParts|| (old?.dirty?['morning','evening']:[])),activePeriod])]});state.deleted=state.deleted.filter(d=>d!==day);try{saveEntries();}catch{$('formMessage').textContent='Zápis se nepodařilo uložit do zařízení. Zkontroluj volné místo a nastavení prohlížeče.';return;}
+ const drafts=readDrafts();delete drafts[draftKey()];localStorage.setItem(DRAFT_KEY,JSON.stringify(drafts));
  home($('date').value);showToast(morning?'Ranní zápis uložen.':'Večerní zápis uložen.');sync();
 };
 $('exportCsv').onclick=()=>downloadBlob(C.csv(entries),'mindtrack-v4.csv','text/csv;charset=utf-8');
 const backup=document.createElement('button');backup.className='button button-secondary';backup.textContent='Záloha JSON';backup.onclick=()=>downloadBlob(JSON.stringify({version:4,entries:entries.map(C.clean)},null,2),'mindtrack-v4.json','application/json');$('exportCsv').parentElement.appendChild(backup);
 $('importJson').onchange=async e=>{try{if(!available())return;const file=e.target.files[0];if(!file)return;const imported=C.parseBackup(await file.text());if(!confirm('Importovat '+imported.length+' záznamů? Shodné dny budou nahrazeny a při sdílení odeslány.'))return;const map=new Map(entries.map(x=>[x.date,x]));imported.forEach(x=>map.set(x.date,{...x,dirty:true}));entries=[...map.values()];state.deleted=state.deleted.filter(d=>!map.has(d));saveEntries();renderDashboard();renderHistory();sync();}catch(err){showToast(err.message);}finally{e.target.value='';}};
-$('clearAll').onclick=()=>{if(!available()||!confirm('Smazat všechny záznamy? Při obnovení sdílení budou smazány také z databáze.'))return;state.deleted.push(...entries.map(e=>e.date));entries=[];saveEntries();renderDashboard();renderHistory();sync();};
+$('clearAll').onclick=()=>{if(!available()||!confirm('Smazat všechny záznamy? Při obnovení sdílení budou smazány také z databáze.'))return;entries.forEach(e=>queueDelete(e.date));entries=[];saveEntries();renderDashboard();renderHistory();sync();};
 $('privacySettings').onclick=()=>{$('cloudError').textContent='';$('participantCode').textContent=state.ownerId?'Tvůj kód: '+state.ownerId:'';$('withdrawSharing').hidden=!state.ownerId;$('consentDialog').showModal();};
 $('closePrivacy').onclick=()=>{if(available())$('consentDialog').close();};
 $('declineSharing').onclick=()=>{if(!available())return;state.consent=false;saveEntries();status('Sdílení je pozastavené. Dříve odeslané údaje zůstávají v databázi.');$('consentDialog').close();};
-$('acceptSharing').onclick=async()=>{if(!available())return;busy=true;try{const id=await cloud.identify(state.ownerId,true);state.ownerId=id;saveEntries();await cloud.enroll();state.consent=true;entries.forEach(e=>e.dirty=true);saveEntries();$('consentDialog').close();}catch(e){$('cloudError').textContent=e.message;}finally{busy=false;}sync();};
-$('withdrawSharing').onclick=async()=>{if(!available()||!confirm('Smazat všechny odeslané záznamy a ukončit účast? Místní kopie zůstane.'))return;state.consent=false;saveEntries();busy=true;try{await cloud.identify(state.ownerId);await cloud.client.functions.invoke('mindtrack-push',{body:{action:'disable'}}).then(r=>{if(r.error)throw r.error;});await cloud.withdraw();state.deleted=[];entries.forEach(e=>e.dirty=false);saveEntries();status('Odeslané záznamy byly smazány. Sdílení je vypnuté.');$('consentDialog').close();}catch(e){$('cloudError').textContent='Sdílení je pozastavené, ale smazání se nepodařilo. Zkus ho znovu online. '+e.message;}finally{busy=false;}};
+$('acceptSharing').onclick=async()=>{if(syncing){showToast('Počkej na dokončení odesílání.');return;}if(!available())return;busy=true;try{const id=await cloud.identify(state.ownerId,true);state.ownerId=id;saveEntries();await cloud.enroll();state.consent=true;entries.forEach(e=>e.dirty=true);saveEntries();$('consentDialog').close();}catch(e){$('cloudError').textContent=e.message;}finally{busy=false;}sync();};
+$('withdrawSharing').onclick=async()=>{if(syncing){showToast('Počkej na dokončení odesílání.');return;}if(!available()||!confirm('Smazat všechny odeslané záznamy a ukončit účast? Místní kopie zůstane.'))return;state.consent=false;saveEntries();busy=true;try{await cloud.identify(state.ownerId);await cloud.client.functions.invoke('mindtrack-push',{body:{action:'disable'}}).then(r=>{if(r.error)throw r.error;});await cloud.withdraw();state.deleted=[];entries.forEach(e=>{e.dirty=false;e.localOnly=true;});saveEntries();status('Odeslané záznamy byly smazány. Sdílení je vypnuté.');$('consentDialog').close();}catch(e){$('cloudError').textContent='Sdílení je pozastavené, ale smazání se nepodařilo. Zkus ho znovu online. '+e.message;}finally{busy=false;}};
 $('syncNow').onclick=()=>state.consent?sync():$('privacySettings').click();window.addEventListener('online',sync);
 const legacy=localStorage.getItem('mindtrack.entries.v1');if(legacy){$('legacyExport').hidden=$('legacyNote').hidden=false;$('legacyExport').onclick=()=>downloadBlob(legacy,'mindtrack-puvodni-v1.json','application/json');}
 
-$('entryForm').addEventListener('input',()=>{if(!activePeriod)return;const drafts=readDrafts();drafts[draftKey()]=Object.fromEntries(new FormData($('entryForm')));sessionStorage.setItem(DRAFT_KEY,JSON.stringify(drafts));});
+$('entryForm').addEventListener('input',()=>{if(!activePeriod)return;const drafts=readDrafts();drafts[draftKey()]=Object.fromEntries(new FormData($('entryForm')));localStorage.setItem(DRAFT_KEY,JSON.stringify(drafts));});
 function updatePeriodLabels(){
  const day=$('date').value,opts={weekday:'long',day:'numeric',month:'numeric'};
  $('dayHeading').textContent='Jaký byl tvůj den?';$('dayDates').textContent=formatDate(day,opts)+' · vyplň večer';
@@ -175,5 +197,8 @@ const reminderController=new MindTrackReminders(cloud,()=>state.ownerId,id=>{sta
 function openNotification(period,day){if(!['morning','evening'].includes(period))return;if(!C.validDate(day)||day>C.today()||day<'2020-01-02')day=C.today();home(day);openForm(period);}
 const deepLink=new URLSearchParams(location.search);openNotification(deepLink.get('checkin'),deepLink.get('day'));
 if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',e=>{if(e.data?.type==='mindtrack-open')openNotification(e.data.period,e.data.day);});
-if(state.consent)sync();
-if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+if(state.consent){if(entries.some(e=>e.dirty)||state.deleted.length)sync();else restoreCloud();}
+initExtras();
+if('serviceWorker'in navigator)window.addEventListener('load',async()=>{
+ try{const reg=await navigator.serviceWorker.register('./sw.js');const offer=()=>{$('updateNotice').hidden=false;$('applyUpdate').onclick=()=>{if(reg.waiting){reg.waiting.postMessage({type:'activate-update'});}else location.reload();};};if(reg.waiting)offer();reg.addEventListener('updatefound',()=>{const w=reg.installing;w?.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller)offer();});});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!$('updateNotice').hidden)location.reload();});await reg.update();}catch{}
+});
