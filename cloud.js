@@ -32,7 +32,7 @@
     async enroll() {
       const current=await this.client.from('mindtrack_participants').select('user_id').eq('user_id',this.userId).maybeSingle();
       if(current.error) throw current.error;
-      if(!current.data) {const r=await this.client.from('mindtrack_participants').insert({user_id:this.userId,consent_version:'2026-11-v2'});if(r.error)throw r.error;}
+      if(!current.data) {const r=await this.client.from('mindtrack_participants').insert({user_id:this.userId,consent_version:'2026-11-v3-auto-notice'});if(r.error)throw r.error;}
     }
     async upload(entries, deleted) {
       // Tombstones remain locally until the entire operation succeeds; retries are idempotent.
