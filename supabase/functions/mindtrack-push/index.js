@@ -1,6 +1,7 @@
 import {createClient} from 'npm:@supabase/supabase-js@2.49.8';
 import webpush from 'npm:web-push@3.6.7';
-import {localClock,previousDay,isDue,validTime,validSubscription} from './logic.js';
+import {localClock,previousDay,validTime,validSubscription} from './logic.js';
+import {dispatchBatches} from './dispatcher.js';
 const SITE='https://mycraft1337.github.io/Skolni-projekt/';
 const db=createClient(Deno.env.get('SUPABASE_URL'),Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),{auth:{persistSession:false,autoRefreshToken:false}});
 const cors={'Access-Control-Allow-Origin':'https://mycraft1337.github.io','Access-Control-Allow-Headers':'authorization, apikey, content-type, x-client-info','Access-Control-Allow-Methods':'POST, OPTIONS','Vary':'Origin'};
@@ -20,31 +21,33 @@ async function send(subscription,payload,c){
 }
 function payload(period,day){return {title:period==='morning'?'MindTrack · ranní zápis':'MindTrack · večerní zápis',body:period==='morning'?'Jaká byla tvoje noc? Zapiš si spánek.':'Jaký byl tvůj den? Zapiš sítě a náladu.',period,day,tag:`mindtrack-${day}-${period}`};}
 async function tick(c){
- const subscriptions=check(await db.from('mindtrack_push_subscriptions').select('*').order('user_id').limit(1000));
  let sent=0,skipped=0,failed=0;
- for(const s of subscriptions){
-  let clock;try{clock=localClock(s.timezone);}catch{continue;}
-  for(const period of ['morning','evening']){
-   if(!isDue(s[period],clock.minute))continue;
-   const claim=await db.from('mindtrack_push_deliveries').insert({user_id:s.user_id,day:clock.day,period,status:'claimed'});
-   if(claim.error?.code==='23505')continue;check(claim);
+ const processed=await dispatchBatches(
+  async limit=>check(await db.rpc('mindtrack_claim_due_reminders',{p_limit:limit})),
+  async job=>{
+   const {user_id,day,period,updated_at}=job;
    let result='failed';
    try{
-    const entryDay=period==='morning'?previousDay(clock.day):clock.day;
-    const entry=check(await db.from('mindtrack_entries').select('sleep_hours,social_minutes').eq('user_id',s.user_id).eq('day',entryDay).maybeSingle());
-    const current=check(await db.from('mindtrack_push_subscriptions').select('*').eq('user_id',s.user_id).maybeSingle());
-    if(!current||current.updated_at!==s.updated_at||entry?.[period==='morning'?'sleep_hours':'social_minutes']!=null){result='skipped';skipped++;}
+    // Recheck after claim so a newly saved check-in or changed/disabled reminder
+    // is respected as late as possible before the external send.
+    const entryDay=period==='morning'?previousDay(day):day;
+    const [entryResult,currentResult]=await Promise.all([
+     db.from('mindtrack_entries').select('sleep_hours,social_minutes').eq('user_id',user_id).eq('day',entryDay).maybeSingle(),
+     db.from('mindtrack_push_subscriptions').select('subscription,updated_at').eq('user_id',user_id).maybeSingle()
+    ]);
+    const entry=check(entryResult),current=check(currentResult);
+    if(!current||current.updated_at!==updated_at||entry?.[period==='morning'?'sleep_hours':'social_minutes']!=null){result='skipped';skipped++;}
     else{
-     const code=await send(current.subscription,payload(period,clock.day),c);
-     if(code>=200&&code<300){result='sent';sent++;}else{failed++;if(code===404||code===410)check(await db.from('mindtrack_push_subscriptions').delete().eq('user_id',s.user_id).eq('updated_at',s.updated_at));}
+     const code=await send(current.subscription,payload(period,day),c);
+     if(code>=200&&code<300){result='sent';sent++;}else{failed++;if(code===404||code===410)check(await db.from('mindtrack_push_subscriptions').delete().eq('user_id',user_id).eq('updated_at',updated_at));}
     }
    }catch{failed++;}
-   check(await db.from('mindtrack_push_deliveries').update({status:result}).eq('user_id',s.user_id).eq('day',clock.day).eq('period',period));
+   // A persisted claim prevents duplicates even if the status update fails.
+   await db.from('mindtrack_push_deliveries').update({status:result}).eq('user_id',user_id).eq('day',day).eq('period',period);
   }
- }
- // Retain only recent technical delivery records.
+ );
  check(await db.from('mindtrack_push_deliveries').delete().lt('day',new Date(Date.now()-30*864e5).toISOString().slice(0,10)));
- return {sent,skipped,failed};
+ return {sent,skipped,failed,processed};
 }
 Deno.serve(async req=>{
  if(req.method==='OPTIONS')return new Response(null,{headers:cors});
