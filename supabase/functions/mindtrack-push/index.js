@@ -63,7 +63,7 @@ Deno.serve(async req=>{
   }
   const jwt=req.headers.get('authorization')?.replace(/^Bearer\s+/i,'');if(!jwt)return reply({error:'Unauthorized'},401);
   const {data,error}=await db.auth.getUser(jwt);if(error||!data.user)return reply({error:'Unauthorized'},401);
-  const user=data.user.id;
+  const device=data.user.id;const linked=check(await db.from('mindtrack_device_links').select('owner_id').eq('device_id',device).maybeSingle());const user=linked?.owner_id||device;
   if(body.action==='disable'){check(await db.from('mindtrack_push_subscriptions').delete().eq('user_id',user));return reply({ok:true});}
   if(body.action==='status'){
    const s=check(await db.from('mindtrack_push_subscriptions').select('morning,evening,timezone').eq('user_id',user).maybeSingle());return reply({settings:s});

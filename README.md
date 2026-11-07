@@ -129,3 +129,84 @@ SQL test použil 1005 syntetických účastníků: z 1005 odběrů vrátil pouze
 odběru za původní hranicí 1000. Ověřil opakované volání bez duplicit, letní čas,
 vynechání hotového spánku, expirované okno a postupné vybrání všech 1005 přes dávky.
 Nejde o test doručení 1005 oznámení ani garanci takové kapacity v reálném provozu.
+
+## v5.0.0 – spolehlivost a přehled výzkumu (build 20261107.1)
+
+První otevření ukáže stručné instrukce; lze je znovu otevřít z patičky. Otázek zůstává pět.
+Instrukce sjednocují rozsah sociálních aplikací a doporučují večerní zápis na konci dne
+s možností pozdější opravy. Začátek/konec studie ani automatické ukončení připomínek se nepřidávají.
+
+Zápisy a karty ukazují stav uložení/odeslání. Upload používá snímek fronty a potvrdí pouze
+nezměněné verze; současné úpravy čekají na další běh. Mazání má vlastní verze, aby potvrzení
+staršího požadavku nesmazalo novější požadavek. Neúspěšné uploady se zkoušejí znovu po 30 s
+při otevřené aplikaci nebo po návratu připojení. Odesílání neblokuje běžné vyplňování.
+Serverová RPC mění jen upravenou polovinu dne, takže další zařízení nepřepíše druhou polovinu.
+Při současné úpravě stejné poloviny rozhoduje poslední přijatý zápis; nejde o živou spolupráci.
+
+Rozepsané formuláře jsou v localStorage a přežijí zavření aplikace; nejsou součástí cloudové
+obnovy. Zálohy JSON obsahují uložené záznamy. Kalendář ukazuje ranní a večerní dokončení
+podle dne vyplňování; přehled nabízí 7/14/30 dní a počty odpovědí u průměrů.
+
+`morning_recorded_at` / `evening_recorded_at` jsou časy posledního uložení dané části podle
+zařízení (UTC; uživatelský čas není důvěryhodný serverový audit). `*_received_at` nastavuje
+serverový trigger při přijetí změněné části. Starší řádky se zpětně nedatují. CSV obsahuje oba
+časové údaje; data za den a následující noc zůstávají spárovaná stejně jako ve v4.
+
+### Obnova účasti
+
+Patička → Obnovení a záloha → Vytvořit nový obnovovací kód. Kód má 256 náhodných bitů;
+server ukládá jen SHA-256 hash. Uživatel si kód musí uložit mimo prohlížeč. Nový kód nahradí
+starý, ale neodpojí již propojená zařízení. Na novém zařízení nejprve obnov účast, teprve pak
+vyplňuj. Zařízení s vlastní existující účastí se automaticky neslučuje s jinou osobou.
+Obnova propojí novou ověřenou anonymní session s původním vlastníkem, bez e-mailu či hesla.
+Přístup kontroluje RLS přes `mindtrack_owner()` a tabulku vazeb, kterou klient nemůže měnit.
+Nikdy nestačí znát veřejný kód účastníka. Soukromý obnovovací kód opravňuje přístup k datům.
+Bez předem vytvořeného kódu nelze ztracenou anonymní session obnovit.
+Neodeslané záznamy vyžadují místní JSON zálohu. Odeslaná historie se načítá při otevření aplikace
+(pokud není čekající upload) a ručně v dialogu obnovy. Obnovování zachovává místní čekající úpravy.
+Připomínky jsou stále jeden serverový odběr na účastníka; jejich zapnutí na novém zařízení
+nahradí předchozí odběr.
+
+### Přehled autora
+
+`research.html` poskytuje počty úplných dvojic a chybějících částí za 7/14/30 dní a CSV všech
+odeslaných odpovědí s kódem účastníka. Nejde o nastavení délky studie; je to pouze filtr zobrazení.
+Počty chybění začínají nejdříve dnem přihlášení k účasti. Přehled nevidí neodeslané místní odpovědi.
+
+Vlastník projektu získá soukromý klíč v Supabase SQL Editoru:
+
+```sql
+select research_token from public.mindtrack_push_config where id = 1;
+```
+
+Klíč vlož pouze do chráněného přehledu. Nikdy ho nedávej do config.js, URL ani GitHubu.
+Stránka klíč drží pouze v paměti po dobu načítání; data zůstávají v paměti do zamknutí/zavření.
+Autorizaci ověřuje Edge Function, nikoli jen skrytý prvek UI. Správcovský klíč je čtecí oprávnění
+ke všem výzkumným datům, oddělené od obnovovacích kódů účastníků. Pro rotaci v SQL Editoru:
+
+```sql
+update public.mindtrack_push_config
+set research_token = gen_random_uuid()::text || gen_random_uuid()::text where id = 1;
+```
+
+### Aktualizace a ověření
+
+Service worker nabídne novou verzi k potvrzení; rozepsané formuláře zůstanou uložené.
+Offline odkazy z oznámení používají cache hlavní stránky i s query parametry. Výzkumná stránka
+se do offline cache neukládá. Verze a build jsou v patičce.
+
+Migrace `20261107131605_reliability_and_recovery.sql`, funkce `mindtrack-account` a změna
+vlastnictví připomínek jsou nasazené. Frontend se nasadí sloučením PR.
+
+Testy: core, check-in UI, sync-queue, research-ui, offline-update, reminders, reminders-ui,
+reminders-sw a dispatcher. UI testy vyžadují jsdom 26.1.0 v NODE_PATH. SQL test ověřil vazbu
+zařízení, izolaci jiné osoby, sloučení obou polovin a serverové časy. Živý test přes dvě
+anonymní testovací session ověřil vytvoření kódu a obnovení původního vlastníka (HTTP 200);
+chybný výzkumný klíč vrátil 401 a platný klíč 200. Oba testovací uživatelé byli odstraněni.
+Vizuální test na skutečném telefonu a doručení oznámení ještě vyžadují kontrolu na zařízení;
+Chromium v pracovním prostředí chybí.
+
+Advisors: RLS bez klientské politiky u tabulky obnovovacích hashů je záměrné
+([vysvětlení](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy)).
+Politiky anonymních účastníků jsou stále omezené vlastnictvím nebo autorizovanou vazbou zařízení
+([kontrola](https://supabase.com/docs/guides/database/database-advisors?queryGroups=lint&lint=0012_auth_allow_anonymous_sign_ins)).

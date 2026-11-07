@@ -20,6 +20,7 @@
       if((e.sleepHours!=null)!==(e.sleepQuality!=null) || (typeof e.beforeBed==='boolean')!==morning) return 'Doplň všechny ranní odpovědi.';
       if(!morning && e.beforeBed!=null) return 'Neplatná ranní odpověď.';
     }
+    for(const k of ['morningRecordedAt','eveningRecordedAt','morningReceivedAt','eveningReceivedAt'])if(e[k]!=null&&(typeof e[k]!=='string'||!Number.isFinite(Date.parse(e[k]))))return 'Neplatný čas záznamu.';
     if(hasMorning(e) && e.date>=latest) return 'Spánek zapiš až následující ráno.';
     for (const [key,min,max,integer] of [['socialMinutes',0,1440,true],['sleepHours',0,24,false],['sleepQuality',1,5,true],['mood',1,5,true]]) {
       const v=e[key]; if(e.schemaVersion===4 && v==null)continue; if (typeof v !== 'number' || !Number.isFinite(v) || v<min || v>max || (integer && !Number.isInteger(v))) return 'Zkontroluj vyplněné hodnoty a jejich rozsah.';
@@ -30,12 +31,12 @@
     if (e.schemaVersion===2 && e.bedMinutes>e.socialMinutes) return 'Čas na sítích před spaním nemůže být vyšší než celkový čas na sítích.';
     return '';
   }
-  function clean(e) { return {schemaVersion:e.schemaVersion, date:e.date, socialMinutes:e.socialMinutes??null, ...(e.schemaVersion===2?{bedMinutes:e.bedMinutes}:{beforeBed:e.beforeBed??null}), sleepHours:e.sleepHours??null, sleepQuality:e.sleepQuality??null, mood:e.mood??null}; }
-  function row(e,userId) { return {user_id:userId,day:e.date,social_minutes:e.socialMinutes,bed_minutes:e.schemaVersion===2?e.bedMinutes:null,before_bed:e.schemaVersion>=3?e.beforeBed:null,sleep_hours:e.sleepHours,sleep_quality:e.sleepQuality,mood:e.mood??null}; }
-  function fromRow(r) { return clean({schemaVersion:r.bed_minutes!=null?2:4,date:r.day,socialMinutes:r.social_minutes,bedMinutes:r.bed_minutes,beforeBed:r.before_bed,sleepHours:r.sleep_hours==null?null:Number(r.sleep_hours),sleepQuality:r.sleep_quality,mood:r.mood}); }
+  function clean(e) { return {...Object.fromEntries(['morningRecordedAt','eveningRecordedAt','morningReceivedAt','eveningReceivedAt'].filter(k=>e[k]!=null).map(k=>[k,e[k]])),schemaVersion:e.schemaVersion, date:e.date, socialMinutes:e.socialMinutes??null, ...(e.schemaVersion===2?{bedMinutes:e.bedMinutes}:{beforeBed:e.beforeBed??null}), sleepHours:e.sleepHours??null, sleepQuality:e.sleepQuality??null, mood:e.mood??null}; }
+  function row(e,userId) { return {user_id:userId,day:e.date,morning_recorded_at:e.morningRecordedAt??null,evening_recorded_at:e.eveningRecordedAt??null,social_minutes:e.socialMinutes,bed_minutes:e.schemaVersion===2?e.bedMinutes:null,before_bed:e.schemaVersion>=3?e.beforeBed:null,sleep_hours:e.sleepHours,sleep_quality:e.sleepQuality,mood:e.mood??null}; }
+  function fromRow(r) { return clean({schemaVersion:r.bed_minutes!=null?2:4,date:r.day,morningRecordedAt:r.morning_recorded_at,eveningRecordedAt:r.evening_recorded_at,morningReceivedAt:r.morning_received_at,eveningReceivedAt:r.evening_received_at,socialMinutes:r.social_minutes,bedMinutes:r.bed_minutes,beforeBed:r.before_bed,sleepHours:r.sleep_hours==null?null:Number(r.sleep_hours),sleepQuality:r.sleep_quality,mood:r.mood}); }
   function csv(entries) {
-    const headers=['verze','den_socialnich_siti_a_nalady','site_min','site_pred_spanim_ano_ne','puvodni_cas_pred_spanim_min','nasledujici_spanek_min','kvalita_nasledujiciho_spanku_1_5','nalada_1_5'];
-    return '\uFEFF'+[headers.join(';'),...entries.map(e=>[e.schemaVersion,e.date,e.socialMinutes,typeof e.beforeBed==='boolean'?(e.beforeBed?'ano':'ne'):'',e.schemaVersion===2?e.bedMinutes:'',e.sleepHours==null?'':Math.round(e.sleepHours*60),e.sleepQuality,e.mood].map(x=>'"'+String(x??'').replace(/"/g,'""')+'"').join(';'))].join('\r\n');
+    const headers=['verze','den_socialnich_siti_a_nalady','site_min','site_pred_spanim_ano_ne','puvodni_cas_pred_spanim_min','nasledujici_spanek_min','kvalita_nasledujiciho_spanku_1_5','nalada_1_5','rano_zapsano_UTC','vecer_zapsano_UTC','rano_prijato_UTC','vecer_prijato_UTC'];
+    return '\uFEFF'+[headers.join(';'),...entries.map(e=>[e.schemaVersion,e.date,e.socialMinutes,typeof e.beforeBed==='boolean'?(e.beforeBed?'ano':'ne'):'',e.schemaVersion===2?e.bedMinutes:'',e.sleepHours==null?'':Math.round(e.sleepHours*60),e.sleepQuality,e.mood,e.morningRecordedAt,e.eveningRecordedAt,e.morningReceivedAt,e.eveningReceivedAt].map(x=>'"'+String(x??'').replace(/"/g,'""')+'"').join(';'))].join('\r\n');
   }
   function parseBackup(text) {
     const data=JSON.parse(text);

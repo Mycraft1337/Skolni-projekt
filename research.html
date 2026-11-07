@@ -1,0 +1,10 @@
+<!doctype html><html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>MindTrack – přehled autora</title><link rel="stylesheet" href="./styles.css?v=5.0.0"></head><body><main class="research-shell">
+<a href="./">← MindTrack</a><h1>Přehled autora</h1><p>Chráněný přehled odeslaných dat. Klíč zůstává jen v paměti této stránky; nesdílej ho s účastníky.</p>
+<form id="researchLogin" class="panel"><label>Klíč správce <input id="researchKey" type="password" autocomplete="off" required></label><button class="button button-primary">Načíst přehled</button></form>
+<p id="researchStatus" role="status"></p><section id="researchContent" hidden>
+<label>Posledních <select id="researchRange"><option value="7">7 dní</option><option value="14">14 dní</option><option value="30">30 dní</option></select></label>
+<button id="researchExport" class="button button-secondary">Stáhnout všechny odpovědi CSV</button><button id="researchLogout" class="text-button">Zamknout přehled</button>
+<p id="researchSummary"></p><p>Chybějící části se počítají za dokončené dny vybraného období od přihlášení k účasti. Neodeslané zápisy server nevidí. Ráno označuje noc následující po datu řádku. Přehled není živý snímek – pro nové odpovědi načti stránku znovu.</p>
+<div class="table-scroll"><table><thead><tr><th>Kód účastníka</th><th>Úplné dvojice</th><th>Chybí spánek</th><th>Chybí večer</th></tr></thead><tbody id="researchRows"></tbody></table></div>
+</section><details><summary>Jak získám klíč správce?</summary><p>Jako vlastník projektu otevři Supabase → SQL Editor a spusť:</p><pre>select research_token from public.mindtrack_push_config where id = 1;</pre><p>Výsledek vlož pouze do pole nahoře. Nejde o veřejný API klíč.</p></details>
+</main><script src="./config.js?v=5.0.0"></script><script src="./core.js?v=5.0.0"></script><script src="./research.js?v=5.0.0"></script></body></html>

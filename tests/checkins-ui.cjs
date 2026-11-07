@@ -4,11 +4,11 @@ const root=path.resolve(__dirname,'..'),read=n=>fs.readFileSync(path.join(root,n
 const key='mindtrack.state.v2';
 function boot(saved){
  const dom=new JSDOM(read('index.html'),{url:'https://example.test/',runScripts:'outside-only'}),w=dom.window;
- w.scrollTo=()=>{};w.confirm=()=>true;w.MINDTRACK_CONFIG={};
+ w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.scrollTo=()=>{};w.confirm=()=>true;w.MINDTRACK_CONFIG={};
  const uploads=[];
  w.MindTrackCloud=class{async identify(){this.userId='test';return 'test'}async enroll(){}async upload(entries){uploads.push(JSON.parse(JSON.stringify(entries)));}};
  if(saved)w.localStorage.setItem(key,JSON.stringify(saved));
- w.eval(read('core.js'));w.eval(read('reminders.js'));w.eval(read('app.js'));
+ w.eval(read('core.js'));w.eval(read('reminders.js'));w.eval(read('extras.js')+'\n'+read('app.js'));
  return {w,d:w.document,uploads,dom,state:()=>JSON.parse(w.localStorage.getItem(key))};
 }
 const settle=()=>new Promise(r=>setTimeout(r,10));
