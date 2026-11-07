@@ -22,8 +22,8 @@
   function row(e,userId) { return {user_id:userId,day:e.date,social_minutes:e.socialMinutes,bed_minutes:e.schemaVersion===2?e.bedMinutes:null,before_bed:e.schemaVersion===3?e.beforeBed:null,sleep_hours:e.sleepHours,sleep_quality:e.sleepQuality,mood:e.mood}; }
   function fromRow(r) { return clean({schemaVersion:typeof r.before_bed==='boolean'?3:2,date:r.day,socialMinutes:r.social_minutes,bedMinutes:r.bed_minutes,beforeBed:r.before_bed,sleepHours:Number(r.sleep_hours),sleepQuality:r.sleep_quality,mood:r.mood}); }
   function csv(entries) {
-    const headers=['verze','den_socialnich_siti_a_nalady','site_min','site_pred_spanim_ano_ne','puvodni_cas_pred_spanim_min','nasledujici_spanek_h','kvalita_nasledujiciho_spanku_1_5','nalada_1_5'];
-    return '\uFEFF'+[headers.join(';'),...entries.map(e=>[e.schemaVersion,e.date,e.socialMinutes,e.schemaVersion===3?(e.beforeBed?'ano':'ne'):'',e.schemaVersion===2?e.bedMinutes:'',e.sleepHours,e.sleepQuality,e.mood].map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(';'))].join('\r\n');
+    const headers=['verze','den_socialnich_siti_a_nalady','site_min','site_pred_spanim_ano_ne','puvodni_cas_pred_spanim_min','nasledujici_spanek_min','kvalita_nasledujiciho_spanku_1_5','nalada_1_5'];
+    return '\uFEFF'+[headers.join(';'),...entries.map(e=>[e.schemaVersion,e.date,e.socialMinutes,e.schemaVersion===3?(e.beforeBed?'ano':'ne'):'',e.schemaVersion===2?e.bedMinutes:'',Math.round(e.sleepHours*60),e.sleepQuality,e.mood].map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(';'))].join('\r\n');
   }
   function parseBackup(text) {
     const data=JSON.parse(text);

@@ -31,3 +31,6 @@ Ověřit zápis, opravu, export, import v2, výpadek internetu a opakované odes
 Počet účastníků, doba sledování a doba uchování údajů dosud nejsou určeny. Před sběrem je musí autor sdělit účastníkům.
 
 Kontroly v3.1: volba koleček, klávesnice, obnovení při editaci a rozpracovaný formulář; automatické odeslání přes mock adaptér a respektování vypnutého sdílení; databázový test obou verzí informace. Skutečný mobilní prohlížeč je ještě potřeba ověřit.
+
+## Sleep units (v3.1.1)
+For analysis use `social_minutes` and `sleep_minutes`: both contain total whole minutes. `sleep_minutes` is generated automatically for existing and future rows, including edits. `sleep_hours` remains for compatibility with existing clients; do not write to the generated column. 13.37 decimal hours corresponds to approximately 802 minutes, not 13 h 37 min. The app CSV uses `nasledujici_spanek_min`. The wheel UI and local backup format remain unchanged. Migration sleep_minutes was applied on 2026-11-07. Every whole-minute duration from 0 to 1440 was checked for round-trip conversion through numeric(4,2).
