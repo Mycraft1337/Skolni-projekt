@@ -33,3 +33,5 @@
 .checkin-choice strong{font-size:1.2rem}.choice-icon{font-size:1.8rem}.checkin-choice small{line-height:1.6;color:#626e83}
 .checkin-choice:focus-visible{outline:3px solid #7967e8;outline-offset:3px}
 @media(max-width:540px){.checkin-choices{grid-template-columns:1fr}.checkin-choice{padding:18px}.row-actions{flex-wrap:wrap}}
+
+.reminder-row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 0;border-bottom:1px solid #e6e8f0;flex-wrap:wrap}.reminder-row input[type=time]{font:inherit;padding:10px;border:1px solid #dce1eb;border-radius:10px}.reminder-row input[type=checkbox]{width:18px;height:18px;vertical-align:middle;margin-right:8px}
