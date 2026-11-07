@@ -8,7 +8,7 @@ function boot(saved){
  const uploads=[];
  w.MindTrackCloud=class{async identify(){this.userId='test';return 'test'}async enroll(){}async upload(entries){uploads.push(JSON.parse(JSON.stringify(entries)));}};
  if(saved)w.localStorage.setItem(key,JSON.stringify(saved));
- w.eval(read('core.js'));w.eval(read('app.js'));
+ w.eval(read('core.js'));w.eval(read('reminders.js'));w.eval(read('app.js'));
  return {w,d:w.document,uploads,dom,state:()=>JSON.parse(w.localStorage.getItem(key))};
 }
 const settle=()=>new Promise(r=>setTimeout(r,10));

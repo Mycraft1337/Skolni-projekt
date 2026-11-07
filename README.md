@@ -62,16 +62,49 @@ Ověření:
 - Databázový test částečných řádků, doplnění druhé poloviny, NULL a odmítnutí nedokončené noci proběhl v transakci s rollbackem.
 - Testy DOM používají mock cloudového přenosu. Vizuální/touch test na skutečném telefonu je ještě potřeba; automatický Chromium download v pracovním prostředí selhal na neúplném ZIP.
 
-### Možnosti připomínek (zatím neimplementováno)
+### v4.1: volitelné připomínky
 
-Web Push funguje i při zavřené aplikaci. Na iPhonu/iPadu musí být web přidaný na plochu
-(iOS/iPadOS 16.4+) a uživatel musí aktivně povolit oznámení.
-Samotný statický GitHub Pages neumí plánovat serverové odesílání.
-Pro další implementaci je potřeba: přihlášení k Push API, uložení odběru s RLS,
-serverová funkce s privátním VAPID klíčem a plánovač, uživatelská volba ranního/večerního času
-s časovým pásmem a možnost vypnutí. Připomínky by měly vynechat již vyplněnou část;
-oznámení nemají obsahovat odpovědi účastníka. Nestačí `setTimeout` nebo interval v otevřené stránce.
+V patičce otevři **Připomínky**, zapni ranní a/nebo večerní část, nastav časy a stiskni
+**Zapnout / uložit připomínky**. Teprve tato akce žádá oprávnění. Poté lze odeslat zkušební
+notifikaci (nejvýše jednou za minutu). Nastavení lze měnit a odběr vypnout.
+Na iPhonu/iPadu nejprve přidej aplikaci na plochu a otevři ji z této ikony.
+Při změně časového pásma znovu ulož nastavení. Letní/zimní čas se počítá podle zvoleného IANA pásma.
+
+Backend v připojeném projektu je nasazený: `mindtrack-push`, Cron `mindtrack-reminders` každou minutu.
+Stránka na GitHub Pages se aktualizuje po sloučení PR. Před prvním použitím obnov stránku;
+pokud byla otevřená stará verze, zavři a znovu otevři aplikaci z plochy.
+
+- Ranní připomínka kontroluje spánek u předchozího dne, večerní čas sítí u dnešního dne.
+- Kontrolují se pouze odeslané odpovědi. Místní/offline záznamy server nevidí.
+- Každá připomínka má jeden atomicky rezervovaný pokus za místní den. Neúspěšné pokusy se ten den neopakují, aby při nejistém výsledku nevznikaly duplicity.
+- Odesílání je možné v 15minutovém okně po nastaveném čase; TTL zprávy je 15 minut. Výpadek serveru, offline zařízení nebo režim soustředění může způsobit zpoždění či nedoručení.
+- Školní prototyp zpracuje nejvýše 1000 odběrů v jednom běhu; před větším nasazením je potřeba dávkování/fronta.
+- HTTP 404/410 odstraní neplatný odběr. Vypnutí smaže odběr na serveru a odhlásí zařízení.
+- Ukončení účasti přes aplikaci vypne i serverový odběr. Pozastavení sdílení samo o sobě připomínky nevypíná.
+- Zpráva obsahuje jen obecnou připomínku, datum a odkaz na příslušný formulář, žádné odpovědi.
+
+Bezpečnost: browser používá ověřenou Supabase session. Funkce ověřuje JWT přes `auth.getUser`;
+cron používá oddělený náhodný token. Gateway `verify_jwt=false` je záměrně nahrazeno těmito kontrolami,
+nikoli veřejným oprávněním odesílat zprávy. Uživatel může měnit jen vlastní odběr.
+Endpointy mají allowlist push poskytovatelů (Apple, Google, Mozilla, Windows), HTTPS a zákaz přesměrování.
+Privátní VAPID klíč a cron token vznikají na serveru, jsou v serverové tabulce s RLS a odebranými
+oprávněními `anon`/`authenticated`, nejsou ve frontendu ani GitHubu. Do logů neukládáme endpointy či obsah odpovědí.
+Tabulka technických pokusů se čistí po 30 dnech.
+
+Advisors: serverové tabulky config/deliveries mají záměrně RLS bez klientských politik
+([vysvětlení](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy)).
+Politiky anonymních účastníků i systémového Cronu vyhodnoť podle vlastnictví řádků
+([kontrola](https://supabase.com/docs/guides/database/database-advisors?queryGroups=lint&lint=0012_auth_allow_anonymous_sign_ins));
+nejde o veřejný přístup ke všem záznamům. Dosavadní upozornění na ochranu hesel zůstává; aplikace nemá heslové přihlášení.
+
+Ověření navíc: `node tests/reminders.cjs` a `NODE_PATH=/cesta/k/node_modules node tests/reminders-ui.cjs` (jsdom 26.1.0).
+Živý Cron → Edge Function vrátil HTTP 200, neautorizovaný požadavek HTTP 401.
+Transakční SQL test ověřil RLS izolaci a unikátní rezervaci doručení, bez ponechání testovacích uživatelů.
+Skutečné doručení push na zařízení je nutné dokončit přes tlačítko Zkušební oznámení po povolení uživatelem;
+automatický prohlížeč není v pracovním prostředí dostupný.
 
 Zdroje:
 - https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/
-- https://developer.mozilla.org/en-US/docs/Web/API/Push_API
+- https://supabase.com/docs/guides/functions/schedule-functions
+- https://supabase.com/docs/guides/functions/auth
+- https://github.com/web-push-libs/web-push

@@ -7,7 +7,7 @@
   <meta name="description" content="MindTrack — osobní přehled sociálních sítí, spánku a nálady.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=4.0.0">
+  <link rel="stylesheet" href="./styles.css?v=4.1.0">
   <title>MindTrack — digitální pohoda</title>
 </head>
 <body>
@@ -85,7 +85,7 @@
         <article class="panel history-panel"><div class="history-toolbar"><div><h2>Všechny dny</h2><p class="muted" id="historyCount">0 záznamů</p></div><div class="toolbar-actions"><button class="button button-secondary" id="exportCsv">↓ Export CSV</button><label class="button button-secondary import-label">↑ Import JSON<input type="file" id="importJson" accept=".json,application/json" hidden></label></div></div><div id="historyEntries" class="history-list"><div class="empty-state">Zatím nemáš žádné záznamy.</div></div><button class="text-button" id="legacyExport" type="button" hidden>Stáhnout původní záznamy verze 1</button><p class="muted" id="legacyNote" hidden>Starší záznamy zůstaly zachované odděleně kvůli jinému přiřazení spánku.</p><div class="danger-zone"><div><strong>Správa dat</strong><p class="muted">Tato akce smaže všechny záznamy z tohoto prohlížeče.</p></div><button class="button button-danger" id="clearAll">Smazat vše</button></div></article>
       </section>
 
-      <footer class="app-footer"><span>MindTrack <small id="appVersion"></small></span><button class="privacy-settings" id="privacySettings" type="button">Soukromí a sdílení</button><span>Vlastní školní prototyp · tvoje data, tvůj přehled</span></footer>
+      <footer class="app-footer"><button class="privacy-settings" id="reminderSettings" type="button">🔔 Připomínky</button><span>MindTrack <small id="appVersion"></small></span><button class="privacy-settings" id="privacySettings" type="button">Soukromí a sdílení</button><span>Vlastní školní prototyp · tvoje data, tvůj přehled</span></footer>
     </main>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -101,9 +101,27 @@
     <p id="cloudError" role="alert"></p>
     <button class="text-button" id="closePrivacy" type="button">Zavřít</button>
   </dialog>
-  <script src="./config.js?v=4.0.0"></script>
-  <script src="./core.js?v=4.0.0"></script>
-  <script src="./cloud.js?v=4.0.0"></script>
-  <script src="./app.js?v=4.0.0"></script>
+
+  <dialog class="consent-dialog" id="reminderDialog" aria-labelledby="reminderTitle">
+    <h2 id="reminderTitle">Připomínky zápisu</h2>
+    <p>Vyber si, kdy ti máme připomenout zápis. Každou část můžeš zapnout zvlášť.</p>
+    <p id="iosPushHelp" class="sharing-inline" hidden><strong>Na iPhonu nejprve:</strong> Sdílet → Přidat na plochu. Potom otevři MindTrack z ikony na ploše a zapni připomínky.</p>
+    <form id="reminderForm">
+      <div class="reminder-row"><label><input type="checkbox" id="morningReminderEnabled" checked> Ranní zápis</label><label>Čas <input type="time" id="morningReminderTime" value="08:00" required></label></div>
+      <div class="reminder-row"><label><input type="checkbox" id="eveningReminderEnabled" checked> Večerní zápis</label><label>Čas <input type="time" id="eveningReminderTime" value="20:00" required></label></div>
+      <p class="muted">Časové pásmo zařízení: <span id="reminderTimezone"></span>. Při cestování ulož časy znovu.</p>
+      <p class="field-help">Už vyplněné a odeslané části nepřipomínáme. Zápis uložený jen v telefonu server nevidí. Doručení může mít zpoždění podle připojení a nastavení telefonu.</p>
+      <p class="field-help">Pro doručování se v Supabase uloží odběr tohoto zařízení, zvolené časy a časové pásmo. Připomínky můžeš kdykoli vypnout.</p>
+      <button id="saveReminders" class="button button-primary" type="submit">Zapnout / uložit připomínky</button>
+    </form>
+    <div class="consent-actions"><button id="testReminder" type="button" class="button button-secondary">Zkušební oznámení</button><button id="disableReminders" type="button" class="button button-secondary">Vypnout připomínky</button></div>
+    <p id="reminderMessage" role="status" aria-live="polite"></p>
+    <button id="closeReminders" class="text-button" type="button">Zavřít</button>
+  </dialog>
+  <script src="./config.js?v=4.1.0"></script>
+  <script src="./core.js?v=4.1.0"></script>
+  <script src="./cloud.js?v=4.1.0"></script>
+  <script src="./reminders.js?v=4.1.0"></script>
+  <script src="./app.js?v=4.1.0"></script>
 </body>
 </html>

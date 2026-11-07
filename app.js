@@ -125,7 +125,7 @@ function renderInsights(list) {
   $("insights").innerHTML=insights.slice(0,4).map(i=>`<div class="insight-card"><span class="insight-symbol">${i[0]}</span><div><strong>${i[1]}</strong><p>${i[2]}</p></div></div>`).join("");
 }
 
-$('appVersion').textContent='v4.0.0';$('todayLabel').textContent=new Date().toLocaleDateString('cs-CZ');$('rangeLabel').textContent='Posledních 7 dokončených dní';
+$('appVersion').textContent='v4.1.0';$('todayLabel').textContent=new Date().toLocaleDateString('cs-CZ');$('rangeLabel').textContent='Posledních 7 dokončených dní';
 document.querySelectorAll('.nav-item').forEach(b=>b.onclick=()=>b.dataset.view==='entry'?home():showView(b.dataset.view));
 $('topAdd').onclick=()=>home();$('historyAdd').onclick=()=>home();$('viewHistory').onclick=()=>showView('history');$('cancelEntry').onclick=()=>home($('date').value);
 $('date').onchange=()=>{if(!C.validDate($('date').value)||$('date').value>C.today()||$('date').value<'2020-01-02'){$('date').value=C.today();}home($('date').value);};
@@ -152,7 +152,7 @@ $('privacySettings').onclick=()=>{$('cloudError').textContent='';$('participantC
 $('closePrivacy').onclick=()=>{if(available())$('consentDialog').close();};
 $('declineSharing').onclick=()=>{if(!available())return;state.consent=false;saveEntries();status('Sdílení je pozastavené. Dříve odeslané údaje zůstávají v databázi.');$('consentDialog').close();};
 $('acceptSharing').onclick=async()=>{if(!available())return;busy=true;try{const id=await cloud.identify(state.ownerId,true);state.ownerId=id;saveEntries();await cloud.enroll();state.consent=true;entries.forEach(e=>e.dirty=true);saveEntries();$('consentDialog').close();}catch(e){$('cloudError').textContent=e.message;}finally{busy=false;}sync();};
-$('withdrawSharing').onclick=async()=>{if(!available()||!confirm('Smazat všechny odeslané záznamy a ukončit účast? Místní kopie zůstane.'))return;state.consent=false;saveEntries();busy=true;try{await cloud.identify(state.ownerId);await cloud.withdraw();state.deleted=[];entries.forEach(e=>e.dirty=false);saveEntries();status('Odeslané záznamy byly smazány. Sdílení je vypnuté.');$('consentDialog').close();}catch(e){$('cloudError').textContent='Sdílení je pozastavené, ale smazání se nepodařilo. Zkus ho znovu online. '+e.message;}finally{busy=false;}};
+$('withdrawSharing').onclick=async()=>{if(!available()||!confirm('Smazat všechny odeslané záznamy a ukončit účast? Místní kopie zůstane.'))return;state.consent=false;saveEntries();busy=true;try{await cloud.identify(state.ownerId);await cloud.client.functions.invoke('mindtrack-push',{body:{action:'disable'}}).then(r=>{if(r.error)throw r.error;});await cloud.withdraw();state.deleted=[];entries.forEach(e=>e.dirty=false);saveEntries();status('Odeslané záznamy byly smazány. Sdílení je vypnuté.');$('consentDialog').close();}catch(e){$('cloudError').textContent='Sdílení je pozastavené, ale smazání se nepodařilo. Zkus ho znovu online. '+e.message;}finally{busy=false;}};
 $('syncNow').onclick=()=>state.consent?sync():$('privacySettings').click();window.addEventListener('online',sync);
 const legacy=localStorage.getItem('mindtrack.entries.v1');if(legacy){$('legacyExport').hidden=$('legacyNote').hidden=false;$('legacyExport').onclick=()=>downloadBlob(legacy,'mindtrack-puvodni-v1.json','application/json');}
 
@@ -170,5 +170,10 @@ function initWheels(){document.querySelectorAll('.time-wheel').forEach(w=>{const
 function refreshWheels(){document.querySelectorAll('.time-wheel').forEach(w=>w.refresh());}
 initWheels();updateSharingNotice();$('formPrivacy').onclick=()=>$('privacySettings').click();
 if(!state.consent)status('Odesílání je vypnuté. Záznamy zůstávají pouze v tomto prohlížeči.');
-renderDashboard();home();if(state.consent)sync();
+renderDashboard();home();
+const reminderController=new MindTrackReminders(cloud,()=>state.ownerId,id=>{state.ownerId=id;saveEntries();});
+function openNotification(period,day){if(!['morning','evening'].includes(period))return;if(!C.validDate(day)||day>C.today()||day<'2020-01-02')day=C.today();home(day);openForm(period);}
+const deepLink=new URLSearchParams(location.search);openNotification(deepLink.get('checkin'),deepLink.get('day'));
+if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',e=>{if(e.data?.type==='mindtrack-open')openNotification(e.data.period,e.data.day);});
+if(state.consent)sync();
 if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
